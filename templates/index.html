@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kira Wallet App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        
+        /* THE "VIEW MODE" ENGINE */
+        body { -ms-overflow-style: none; scrollbar-width: none; font-family: sans-serif; transition: background-color 0.4s; }
+        
+        body.mode-desktop { background-color: #f8fafc; }
+        body.mode-desktop #app-wrapper { width: 100%; height: 100vh; border-radius: 0; border: none; background-color: #f8fafc; margin: 0; }
+        body.mode-desktop #desktop-sidebar { display: flex !important; }
+        body.mode-desktop #mobile-header, 
+        body.mode-desktop #mobile-nav { display: none !important; }
+        body.mode-desktop .view-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+        body.mode-desktop .view-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+        body.mode-desktop .col-span-1 { grid-column: span 1 / span 1; }
+        body.mode-desktop .col-span-2 { grid-column: span 2 / span 2; }
+        body.mode-desktop .hide-on-desktop { display: none !important; }
+        body.mode-desktop #scroll-container { padding: 2.5rem; }
+
+        body.mode-mobile { background-color: #cbd5e1; display: flex; align-items: center; justify-content: center; }
+        body.mode-mobile #app-wrapper { width: 100%; max-width: 430px; height: 860px; border-radius: 3.5rem; border: 12px solid #0f172a; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); background-color: #f8fafc; overflow: hidden; position: relative; }
+        body.mode-mobile #desktop-sidebar { display: none !important; }
+        body.mode-mobile #mobile-header, 
+        body.mode-mobile #mobile-nav { display: flex !important; }
+        body.mode-mobile .view-grid, 
+        body.mode-mobile .view-grid-2 { display: flex; flex-direction: column; gap: 1rem; }
+        body.mode-mobile .col-span-1, 
+        body.mode-mobile .col-span-2 { width: 100%; }
+        body.mode-mobile #scroll-container { padding: 1.25rem; }
+
+        .toggle-checkbox:checked { right: 0; border-color: #22c55e; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #22c55e; }
+        .shariah-hidden { display: none !important; }
+
+        /* Custom Brand Gradients & Colors */
+        .brand-shopee { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; }
+        .brand-atome { background: linear-gradient(135deg, #fde047 0%, #eab308 100%); color: #422006; }
+        .brand-grab { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); color: white; }
+        .brand-tng { background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); color: white; }
+        .brand-others { background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%); color: white; }
+        .brand-shopback { background: #FF333F; color: white; }
+        .brand-citi { background: #003B70; color: white; }
+    </style>
+</head>
+<body class="mode-desktop h-screen w-full overflow-hidden text-slate-800 relative">
+
+    <div class="fixed top-4 right-4 z-[100] flex bg-white/90 backdrop-blur-md rounded-full shadow-lg p-1 border border-gray-200">
+        <button onclick="setMode('mobile')" id="btn-mode-mobile" class="px-4 py-2 rounded-full text-sm font-bold transition-all text-gray-500 hover:bg-gray-100">📱 Mobile</button>
+        <button onclick="setMode('desktop')" id="btn-mode-desktop" class="px-4 py-2 rounded-full text-sm font-bold transition-all bg-[#0b57d0] text-white">💻 Desktop</button>
+    </div>
+
+    <button class="fixed bottom-28 right-6 md:bottom-10 md:right-10 bg-red-500 hover:bg-red-600 text-white p-4 rounded-full shadow-lg shadow-red-500/40 flex items-center gap-2 z-[90] transition-transform hover:scale-105 active:scale-95 cursor-pointer">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"></path></svg>
+        <span class="hidden md:inline font-bold">Live Support</span>
+    </button>
+
+    <div id="app-wrapper" class="flex flex-col md:flex-row transition-all duration-500 ease-in-out">
+        
+        <aside id="desktop-sidebar" class="flex-col w-64 bg-white border-r border-gray-200 shadow-sm z-20">
+            <div class="p-6 flex items-center gap-3 border-b border-gray-100">
+                <div class="w-10 h-10 bg-[#0b57d0] text-white font-bold rounded-xl flex items-center justify-center text-2xl">K</div>
+                <span class="font-bold text-2xl text-blue-600 tracking-tight">Kira</span>
+            </div>
+            <nav class="flex-1 p-4 space-y-2 mt-4">
+                <button onclick="switchTab('home')" id="desktop-nav-home" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl bg-blue-50 text-[#0b57d0] font-semibold transition-colors"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg> Dashboard</button>
+                <button onclick="switchTab('calendar')" id="desktop-nav-calendar" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-50 font-semibold transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> Calendar</button>
+                <button onclick="switchTab('insights')" id="desktop-nav-insights" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-50 font-semibold transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg> Insights</button>
+                <button onclick="switchTab('budget')" id="desktop-nav-budget" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-50 font-semibold transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg> Budget Tracker</button>
+                <button onclick="switchTab('more')" id="desktop-nav-more" class="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-gray-500 hover:bg-gray-50 font-semibold transition-colors"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg> More</button>
+            </nav>
+        </aside>
+
+        <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+            
+            <header id="mobile-header" class="shrink-0 px-5 pt-12 pb-4 justify-between items-center bg-[#f8fafc] z-10 hidden border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-[#0b57d0] text-white font-bold rounded flex items-center justify-center text-xl">K</div>
+                    <span class="font-bold text-xl text-blue-600">Kira</span>
+                </div>
+            </header>
+
+            <div id="scroll-container" class="flex-1 overflow-y-auto scroll-smooth min-h-0 relative">
+                <div class="max-w-5xl mx-auto pb-8"> 
+
+                    <!-- 1. HOME VIEW -->
+                    <div id="view-home" class="block">
+                        <div class="flex justify-between items-end mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800">Good morning, Hoi Siang</h2>
+                        </div>
+                        <div class="view-grid">
+                            <div class="col-span-1">
+                                <div class="bg-[#0b57d0] rounded-3xl p-6 md:p-8 text-white shadow-lg shadow-blue-500/20 h-full flex flex-col justify-center">
+                                    <p class="text-blue-100 text-xs md:text-sm mb-1 font-medium uppercase tracking-wider">Total Outstanding</p>
+                                    <h3 class="text-3xl md:text-4xl font-extrabold mb-1">RM {{ "{:,.2f}".format(total) }}</h3>
+                                    <p class="text-blue-200 text-xs md:text-sm mt-3">• {{ active_count }} active accounts</p>
+                                </div>
+                            </div>
+                            
+                            <div class="col-span-2">
+                                <div class="flex justify-between items-center mt-2 mb-4">
+                                    <h4 class="font-bold text-gray-800 text-md md:text-lg">Your BNPL Accounts</h4>
+                                    <div class="flex items-center gap-2 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
+                                        <span class="text-xs font-bold text-green-700">Shariah-Only</span>
+                                        <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                                            <input type="checkbox" id="toggleShariah" onclick="filterShariah()" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300 z-10 transition-all right-5"/>
+                                            <label for="toggleShariah" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer transition-colors"></label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="view-grid-2" id="accounts-container">
+                                    {% for account in accounts %}
+                                    <div class="account-card flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100 transition-all cursor-pointer" data-shariah="{{ account.shariah_compliant }}">
+                                        <div class="flex items-center gap-3">
+                                            {% if account.name == 'SPayLater' %}
+                                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl brand-shopee flex items-center justify-center font-extrabold text-xl shadow-sm">S</div>
+                                            {% elif account.name == 'Atome' %}
+                                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl brand-atome flex items-center justify-center font-extrabold text-xl shadow-sm">A</div>
+                                            {% elif account.name == 'Grab PayLater' %}
+                                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl brand-grab flex items-center justify-center font-extrabold text-xl shadow-sm">G</div>
+                                            {% elif account.name == 'PayLater by TnG' %}
+                                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl brand-tng flex items-center justify-center font-extrabold text-xl shadow-sm">T</div>
+                                            {% else %}
+                                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl brand-others flex items-center justify-center font-extrabold text-xl shadow-sm">O</div>
+                                            {% endif %}
+                                            <div>
+                                                <span class="block font-bold text-gray-700 text-sm md:text-base">{{ account.name }}</span>
+                                                {% if account.shariah_compliant == 'true' %}<span class="text-[10px] text-green-600 font-bold bg-green-100 px-1.5 rounded">Compliant</span>{% endif %}
+                                            </div>
+                                        </div>
+                                        <span class="font-bold text-gray-900 text-base md:text-lg">RM {{ "{:,.2f}".format(account.amount) }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. CALENDAR VIEW -->
+                    <div id="view-calendar" class="hidden">
+                        <div class="max-w-md mx-auto md:mx-0">
+                            <div class="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-md mb-8">
+                                <div class="flex justify-between items-center mb-8 px-2">
+                                    <button class="text-gray-400 hover:text-gray-800 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+                                    <h3 class="font-bold text-gray-800 text-lg">October 2026</h3>
+                                    <button class="text-gray-400 hover:text-gray-800 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+                                </div>
+                                <div class="grid grid-cols-7 text-center text-xs font-bold text-gray-400 mb-6">
+                                    <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+                                </div>
+                                <div class="grid grid-cols-7 gap-y-5 text-center text-sm font-semibold text-gray-700">
+                                    <div class="h-8 flex items-center justify-center text-gray-300">28</div><div class="h-8 flex items-center justify-center text-gray-300">29</div><div class="h-8 flex items-center justify-center text-gray-300">30</div><div class="h-8 flex items-center justify-center">1</div><div class="h-8 flex items-center justify-center">2</div><div class="h-8 flex items-center justify-center">3</div><div class="h-8 flex items-center justify-center">4</div><div class="h-8 flex items-center justify-center">5</div><div class="h-8 flex items-center justify-center">6</div><div class="h-8 flex items-center justify-center">7</div><div class="h-8 flex items-center justify-center">8</div><div class="h-8 flex items-center justify-center">9</div><div class="h-8 flex items-center justify-center">10</div><div class="h-8 flex items-center justify-center">11</div>
+                                    <div class="h-8 flex items-center justify-center relative w-full">
+                                        <span class="w-8 h-8 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full z-10">12</span><div class="w-1.5 h-1.5 bg-orange-500 rounded-full absolute -bottom-2"></div>
+                                    </div>
+                                    <div class="h-8 flex items-center justify-center">13</div><div class="h-8 flex items-center justify-center">14</div><div class="h-8 flex items-center justify-center">15</div><div class="h-8 flex items-center justify-center">16</div><div class="h-8 flex items-center justify-center">17</div>
+                                    <div class="h-8 flex items-center justify-center relative w-full">
+                                        <span class="w-8 h-8 flex items-center justify-center bg-yellow-100 text-yellow-600 rounded-full z-10">18</span><div class="w-1.5 h-1.5 bg-yellow-500 rounded-full absolute -bottom-2"></div>
+                                    </div>
+                                    <div class="h-8 flex items-center justify-center">19</div><div class="h-8 flex items-center justify-center">20</div><div class="h-8 flex items-center justify-center">21</div><div class="h-8 flex items-center justify-center">22</div><div class="h-8 flex items-center justify-center">23</div><div class="h-8 flex items-center justify-center">24</div>
+                                    <div class="h-8 flex items-center justify-center relative w-full">
+                                        <span class="w-8 h-8 flex items-center justify-center bg-green-100 text-green-600 rounded-full z-10">25</span><div class="w-1.5 h-1.5 bg-green-500 rounded-full absolute -bottom-2"></div>
+                                    </div>
+                                    <div class="h-8 flex items-center justify-center">26</div><div class="h-8 flex items-center justify-center">27</div><div class="h-8 flex items-center justify-center">28</div><div class="h-8 flex items-center justify-center">29</div><div class="h-8 flex items-center justify-center">30</div><div class="h-8 flex items-center justify-center">31</div><div class="h-8 flex items-center justify-center text-gray-300">1</div>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between items-end mb-4 px-2">
+                                <h4 class="font-bold text-gray-800 text-lg">Upcoming Repayments</h4>
+                                <a href="#" class="text-sm font-bold text-[#0b57d0] hover:underline">View all</a>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                {% for event in calendar %}
+                                <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                    <div class="flex items-center gap-3">
+                                        {% if event.name == 'SPayLater' %}
+                                            <div class="w-10 h-10 rounded-xl brand-shopee flex items-center justify-center font-extrabold text-xl shadow-sm">S</div>
+                                        {% elif event.name == 'Atome' %}
+                                            <div class="w-10 h-10 rounded-xl brand-atome flex items-center justify-center font-extrabold text-xl shadow-sm">A</div>
+                                        {% else %}
+                                            <div class="w-10 h-10 rounded-xl brand-grab flex items-center justify-center font-extrabold text-xl shadow-sm">G</div>
+                                        {% endif %}
+                                        <span class="font-bold text-gray-800 text-sm md:text-base">{{ event.name }}</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-bold text-gray-900 text-base">RM {{ "{:,.2f}".format(event.amount) }}</p>
+                                        <p class="text-xs font-semibold text-gray-500 mt-1">{{ event.date }}</p>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. INSIGHTS VIEW -->
+                    <div id="view-insights" class="hidden">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6">Spending Insights</h2>
+                        <div class="view-grid-2">
+                            <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
+                                <h4 class="font-bold text-gray-800 mb-6 text-center text-base md:text-lg">Distribution by Provider</h4>
+                                <div class="relative w-48 h-48 md:w-64 md:h-64 mx-auto flex items-center justify-center">
+                                    <canvas id="spendingChart" class="z-0"></canvas>
+                                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+                                        <span class="text-xs md:text-sm text-gray-500 mt-2">Total</span>
+                                        <span class="text-lg md:text-xl font-bold text-gray-900">RM {{ "{:,.0f}".format(total) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-bold text-gray-800 mb-4 text-base md:text-lg">Upcoming Payments</h4>
+                                <div class="space-y-3 md:space-y-4">
+                                    {% for payment in upcoming %}
+                                    <div class="flex justify-between items-center bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-gray-100">
+                                        <div class="flex items-center gap-3 md:gap-4">
+                                            {% if payment.name == 'SPayLater' %}
+                                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl brand-shopee flex items-center justify-center font-extrabold text-xl shadow-sm">S</div>
+                                            {% else %}
+                                                <div class="w-10 h-10 md:w-12 md:h-12 rounded-xl brand-atome flex items-center justify-center font-extrabold text-xl shadow-sm">A</div>
+                                            {% endif %}
+                                            <div>
+                                                <p class="font-bold text-gray-800 text-sm md:text-base">{{ payment.name }}</p>
+                                                <p class="text-xs md:text-sm font-semibold text-gray-500">Due: {{ payment.date }}</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-base md:text-lg font-bold text-gray-900">RM {{ "{:,.2f}".format(payment.amount) }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. BUDGET VIEW -->
+                    <div id="view-budget" class="hidden">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6">Smart Budget Tracker</h2>
+                        <div class="max-w-2xl bg-white p-6 rounded-3xl border border-gray-100 shadow-sm mb-6">
+                            <div class="mb-5">
+                                <div class="flex justify-between text-sm mb-2"><span class="text-gray-500 font-medium">Income</span><span class="font-bold">RM {{ "{:,.2f}".format(budget.income) }}</span></div>
+                                <div class="w-full bg-gray-100 rounded-full h-2.5"><div class="bg-green-500 h-2.5 rounded-full" style="width: 100%"></div></div>
+                            </div>
+                            <div class="mb-5">
+                                <div class="flex justify-between text-sm mb-2"><span class="text-gray-500 font-medium">Expenses</span><span class="font-bold">RM {{ "{:,.2f}".format(budget.expenses) }}</span></div>
+                                <div class="w-full bg-gray-100 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width: 64%"></div></div>
+                            </div>
+                            <div class="mb-5">
+                                <div class="flex justify-between text-sm mb-2"><span class="text-gray-500 font-medium">BNPL Repayments</span><span class="font-bold text-orange-500">RM {{ "{:,.2f}".format(budget.repayments) }}</span></div>
+                                <div class="w-full bg-gray-100 rounded-full h-2.5"><div class="bg-orange-500 h-2.5 rounded-full" style="width: 15%"></div></div>
+                            </div>
+                            <div class="pt-5 md:pt-6 border-t mt-6 md:mt-8 flex justify-between items-center">
+                                <span class="font-bold text-gray-800 text-sm md:text-base">Remaining Budget</span>
+                                <span class="font-bold text-green-600 text-xl md:text-2xl">RM {{ "{:,.2f}".format(budget.remaining) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. MORE VIEW -->
+                    <div id="view-more" class="hidden">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6">More Features</h2>
+                        <div class="space-y-6 max-w-3xl">
+                            
+                            <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div class="w-10 h-10 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-xl">⚠️</div>
+                                    <h3 class="font-bold text-lg text-gray-800">Refund & Dispute Tracker</h3>
+                                </div>
+                                <div class="space-y-3">
+                                    {% for dispute in disputes %}
+                                    <div class="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                        <div>
+                                            <p class="font-bold text-gray-800">{{ dispute.merchant }}</p>
+                                            <p class="text-xs text-gray-500">ID: {{ dispute.id }} • {{ dispute.date }}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="font-bold text-gray-900">RM {{ "{:,.2f}".format(dispute.amount) }}</p>
+                                            <p class="text-xs font-bold text-orange-600 mt-1">{{ dispute.status }}</p>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                                <div class="flex items-center gap-3 mb-4">
+                                    <div class="w-10 h-10 bg-blue-100 text-[#0b57d0] rounded-full flex items-center justify-center text-xl">🔐</div>
+                                    <h3 class="font-bold text-lg text-gray-800">Consent Centre</h3>
+                                </div>
+                                <p class="text-sm text-gray-600 mb-6">Manage your linked accounts securely via Open Finance API. You are in control of your data.</p>
+                                <button onclick="switchTab('consent')" class="w-full bg-[#0b57d0] hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors">
+                                    + Link New BNPL / Bank Account
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- 6. CONSENT CENTRE VIEW (SUB-SCREEN) -->
+                    <div id="view-consent" class="hidden">
+                        <div class="flex items-center mb-2">
+                            <button onclick="switchTab('more')" class="mr-3 text-gray-400 hover:text-gray-800 transition">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            </button>
+                            <h2 class="text-2xl font-bold text-[#0b57d0]">Connect Accounts</h2>
+                        </div>
+                        <p class="text-gray-500 text-sm font-medium mb-8 ml-9">Secure. Private. Under your control.</p>
+
+                        <div class="space-y-4 max-w-md">
+                            <!-- Atome -->
+                            <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl brand-atome flex items-center justify-center font-extrabold text-xl shadow-sm">A</div>
+                                    <span class="font-bold text-gray-800">Atome</span>
+                                </div>
+                                <button class="px-4 py-1.5 rounded-full border border-blue-100 text-[#0b57d0] text-sm font-bold hover:bg-blue-50 transition">Connect</button>
+                            </div>
+                            
+                            <!-- Shopback -->
+                            <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl brand-shopback flex items-center justify-center font-extrabold text-xl shadow-sm">S</div>
+                                    <span class="font-bold text-gray-800">ShopBack PayLater</span>
+                                </div>
+                                <button class="px-4 py-1.5 rounded-full border border-blue-100 text-[#0b57d0] text-sm font-bold hover:bg-blue-50 transition">Connect</button>
+                            </div>
+                            
+                            <!-- SPayLater -->
+                            <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl brand-shopee flex items-center justify-center font-extrabold text-xl shadow-sm">S</div>
+                                    <span class="font-bold text-gray-800">SPayLater</span>
+                                </div>
+                                <button class="px-4 py-1.5 rounded-full border border-blue-100 text-[#0b57d0] text-sm font-bold hover:bg-blue-50 transition">Connect</button>
+                            </div>
+                            
+                            <!-- Citi -->
+                            <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl brand-citi flex items-center justify-center font-extrabold text-xl shadow-sm">C</div>
+                                    <span class="font-bold text-gray-800">Citi</span>
+                                </div>
+                                <button class="px-4 py-1.5 rounded-full border border-blue-100 text-[#0b57d0] text-sm font-bold hover:bg-blue-50 transition">Connect</button>
+                            </div>
+                            
+                            <!-- Coming Soon -->
+                            <div class="flex items-center gap-3 p-4 opacity-50">
+                                <div class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center font-extrabold text-2xl shadow-sm">...</div>
+                                <span class="font-bold text-gray-500">More coming soon</span>
+                            </div>
+                        </div>
+
+                        <!-- Floating Shield -->
+                        <div class="absolute bottom-6 right-6 md:bottom-12 md:right-12 w-16 h-16 bg-[#0b57d0] rounded-full flex items-center justify-center shadow-lg shadow-blue-500/50 text-white border-4 border-white pointer-events-none">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- BOTTOM NAV (Mobile) -->
+            <nav id="mobile-nav" class="shrink-0 w-full bg-white border-t border-gray-100 justify-between px-4 pt-4 pb-8 z-20 hidden mt-auto rounded-b-3xl">
+                <button onclick="switchTab('home')" id="mobile-nav-home" class="flex flex-col items-center gap-1 text-[#0b57d0] w-1/5"><svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg><span class="text-[10px] font-bold">Home</span></button>
+                <button onclick="switchTab('calendar')" id="mobile-nav-calendar" class="flex flex-col items-center gap-1 text-gray-400 w-1/5"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><span class="text-[10px] font-bold">Calendar</span></button>
+                <button onclick="switchTab('insights')" id="mobile-nav-insights" class="flex flex-col items-center gap-1 text-gray-400 w-1/5"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg><span class="text-[10px] font-bold">Insights</span></button>
+                <button onclick="switchTab('budget')" id="mobile-nav-budget" class="flex flex-col items-center gap-1 text-gray-400 w-1/5"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg><span class="text-[10px] font-bold">Budget</span></button>
+                <button onclick="switchTab('more')" id="mobile-nav-more" class="flex flex-col items-center gap-1 text-gray-400 w-1/5"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg><span class="text-[10px] font-bold">More</span></button>
+            </nav>
+        </main>
+    </div>
+
+    <div id="app-data" data-accounts='{{ accounts | tojson | safe }}' class="hidden"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dataElement = document.getElementById('app-data');
+            if (dataElement) {
+                window.accountsData = JSON.parse(dataElement.dataset.accounts);
+                const chartLabels = window.accountsData.map(acc => acc.name);
+                const chartData = window.accountsData.map(acc => acc.amount);
+                const chartColors = window.accountsData.map(acc => acc.color);
+
+                const ctx = document.getElementById('spendingChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: chartLabels, datasets: [{ data: chartData, backgroundColor: chartColors, borderWidth: 0, cutout: '78%' }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+            }
+        });
+
+        // Updated switching logic to handle the new Consent sub-screen
+        window.switchTab = function(activeTabName) {
+            const allTabs = ['home', 'calendar', 'insights', 'budget', 'more', 'consent'];
+            
+            allTabs.forEach(tab => {
+                const viewElement = document.getElementById('view-' + tab);
+                const desktopNav = document.getElementById('desktop-nav-' + tab);
+                const mobileNav = document.getElementById('mobile-nav-' + tab);
+
+                // Show the active view, hide the rest
+                if (tab === activeTabName) {
+                    viewElement.classList.remove('hidden');
+                    if (desktopNav) {
+                        desktopNav.classList.add('bg-blue-50', 'text-[#0b57d0]');
+                        desktopNav.classList.remove('text-gray-500', 'hover:bg-gray-50');
+                    }
+                    if (mobileNav) {
+                        mobileNav.classList.add('text-[#0b57d0]');
+                        mobileNav.classList.remove('text-gray-400');
+                    }
+                } else {
+                    viewElement.classList.add('hidden');
+                    if (desktopNav) {
+                        desktopNav.classList.remove('bg-blue-50', 'text-[#0b57d0]');
+                        desktopNav.classList.add('text-gray-500', 'hover:bg-gray-50');
+                    }
+                    if (mobileNav) {
+                        mobileNav.classList.remove('text-[#0b57d0]');
+                        mobileNav.classList.add('text-gray-400');
+                    }
+                }
+            });
+        };
+
+        window.setMode = function(mode) {
+            const body = document.body;
+            const btnMobile = document.getElementById('btn-mode-mobile');
+            const btnDesktop = document.getElementById('btn-mode-desktop');
+
+            if (mode === 'mobile') {
+                body.classList.remove('mode-desktop');
+                body.classList.add('mode-mobile');
+                btnMobile.classList.add('bg-[#0b57d0]', 'text-white');
+                btnMobile.classList.remove('text-gray-500', 'hover:bg-gray-100');
+                btnDesktop.classList.add('text-gray-500', 'hover:bg-gray-100');
+                btnDesktop.classList.remove('bg-[#0b57d0]', 'text-white');
+            } else {
+                body.classList.remove('mode-mobile');
+                body.classList.add('mode-desktop');
+                btnDesktop.classList.add('bg-[#0b57d0]', 'text-white');
+                btnDesktop.classList.remove('text-gray-500', 'hover:bg-gray-100');
+                btnMobile.classList.add('text-gray-500', 'hover:bg-gray-100');
+                btnMobile.classList.remove('bg-[#0b57d0]', 'text-white');
+            }
+        };
+
+        window.filterShariah = function() {
+            const isChecked = document.getElementById('toggleShariah').checked;
+            const accountCards = document.querySelectorAll('.account-card');
+            accountCards.forEach(card => {
+                if (isChecked && card.getAttribute('data-shariah') === 'false') {
+                    card.classList.add('shariah-hidden');
+                } else {
+                    card.classList.remove('shariah-hidden');
+                }
+            });
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+/* Hide scrollbar for a cleaner app feel */
+::-webkit-scrollbar { 
+    display: none; 
+}
+
+body { 
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+    background-color: #e2e8f0; 
+}
+
+.kira-blue { 
+    background-color: #0b57d0; 
+}
+
+.text-kira-blue { 
+    color: #0b57d0; 
+}
