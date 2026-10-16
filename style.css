@@ -1,0 +1,57 @@
+/* Base scrollbar hiding */
+::-webkit-scrollbar {
+    display: none;
+}
+
+body {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    font-family: sans-serif;
+}
+
+.kira-blue {
+    background-color: #0b57d0;
+}
+
+.text-kira-blue {
+    color: #0b57d0;
+}
+
+.toggle-checkbox:checked {
+    right: 0;
+    border-color: #22c55e;
+}
+
+.toggle-checkbox:checked+.toggle-label {
+    background-color: #22c55e;
+}
+
+.shariah-hidden {
+    display: none !important;
+}
+
+/* Brand Colors */
+.brand-shopee {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    color: white;
+}
+
+.brand-atome {
+    background: linear-gradient(135deg, #fde047 0%, #eab308 100%);
+    color: #422006;
+}
+
+.brand-grab {
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    color: white;
+}
+
+.brand-tng {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    color: white;
+}
+
+.brand-hoolah {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
