@@ -18,15 +18,16 @@ let currentProfile = null;
 let authMode = 'login'; // 'login' | 'signup'
 let realtimeChannel = null;
 let pendingPinCallback = null;
+let isFetchingData = false;
 
 // Interactive UI State
 let isBalanceMasked = false;
 let currentCalYear = new Date().getFullYear();
 let currentCalMonth = new Date().getMonth();
-let selectedCalDay = null; // For interactive calendar date filtering
-let simTenure = 3;         // For pre-purchase BNPL simulator
+let selectedCalDay = null;
+let simTenure = 3;
 
-// Default Credit Limits per Provider (for utilization bars)
+// Default Credit Limits per Provider
 const CREDIT_LIMITS = {
     'SPayLater': 1500,
     'Atome': 1200,
@@ -69,9 +70,13 @@ function getDynamicStatus(status, dateStr) {
 }
 
 // ============================================================================
-// AUTHENTICATION, PIN MODAL & SESSION UI INJECTION (No HTML edits needed!)
+// AUTHENTICATION, PIN MODAL & SESSION UI (Cleaned Wording & Zero Duplicates)
 // ============================================================================
 function injectAuthAndSecurityUI() {
+    // Remove any leftover hardcoded auth overlay from index.html so IDs never conflict
+    document.getElementById('auth-overlay')?.remove();
+    document.getElementById('user-session-bar')?.remove();
+
     if (document.getElementById('kira-auth-overlay')) return;
 
     const uiWrapper = document.createElement('div');
@@ -84,49 +89,49 @@ function injectAuthAndSecurityUI() {
                         K
                     </div>
                     <h2 class="text-2xl font-black text-slate-900">Kira Wallet</h2>
-                    <p class="text-xs font-semibold text-slate-500 mt-1">Open Finance BNPL & Shariah Installment Hub</p>
+                    <p id="kira-auth-subtitle" class="text-xs font-semibold text-slate-500 mt-1">Sign in to manage your BNPL installments & budget</p>
                 </div>
 
-                <!-- Sign In / Sign Up Switcher -->
+                <!-- Sign In / Create Account Switcher -->
                 <div class="grid grid-cols-2 bg-[#eef5ff] p-1 rounded-2xl mb-5 border border-blue-100">
-                    <button type="button" id="auth-tab-login" onclick="switchAuthMode('login')" class="py-2.5 rounded-xl text-xs font-extrabold bg-[#0062eb] text-white shadow-xs transition-all">
+                    <button type="button" id="kira-tab-login" onclick="switchAuthMode('login')" class="py-2.5 rounded-xl text-xs font-extrabold bg-[#0062eb] text-white shadow-xs transition-all cursor-pointer">
                         Sign In
                     </button>
-                    <button type="button" id="auth-tab-signup" onclick="switchAuthMode('signup')" class="py-2.5 rounded-xl text-xs font-extrabold text-slate-600 hover:text-slate-900 transition-all">
+                    <button type="button" id="kira-tab-signup" onclick="switchAuthMode('signup')" class="py-2.5 rounded-xl text-xs font-extrabold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
                         Create Account
                     </button>
                 </div>
 
                 <form id="kira-auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
-                    <div id="auth-name-wrap" class="hidden">
+                    <div id="kira-name-wrap" class="hidden">
                         <label class="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
-                        <input type="text" id="auth-input-name" placeholder="e.g. Chan Hoi Siang" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-semibold outline-none transition" />
+                        <input type="text" id="kira-input-name" placeholder="Enter your full name" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-semibold outline-none transition" />
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
-                        <input type="email" id="auth-input-email" placeholder="name@example.com" required class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-semibold outline-none transition" />
+                        <input type="email" id="kira-input-email" placeholder="you@example.com" required class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-semibold outline-none transition" />
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
-                        <input type="password" id="auth-input-password" placeholder="••••••••" minlength="6" required class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-semibold outline-none transition" />
+                        <input type="password" id="kira-input-password" placeholder="At least 6 characters" minlength="6" required class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-semibold outline-none transition" />
                     </div>
 
-                    <div id="auth-pin-wrap" class="hidden">
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Set 4-Digit Security PIN (For Payments & API Consent)</label>
-                        <input type="password" id="auth-input-pin" placeholder="1234" maxlength="4" pattern="\\d{4}" inputmode="numeric" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-black tracking-widest text-center outline-none transition" />
+                    <div id="kira-pin-wrap" class="hidden">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">4-Digit Wallet PIN <span class="text-slate-400 font-medium">(Used to approve payments)</span></label>
+                        <input type="password" id="kira-input-pin" placeholder="e.g. 1234" maxlength="4" pattern="\\d{4}" inputmode="numeric" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-black tracking-widest text-center outline-none transition" />
                     </div>
 
-                    <p id="auth-feedback-msg" class="text-xs font-bold text-center min-h-[18px] text-red-600"></p>
+                    <p id="kira-auth-msg" class="text-xs font-bold text-center min-h-[18px] text-red-600"></p>
 
-                    <button type="submit" id="auth-submit-btn" class="w-full py-3.5 rounded-2xl bg-[#0062eb] hover:bg-blue-700 text-white font-extrabold text-sm shadow-lg shadow-blue-500/25 transition active:scale-[0.99]">
-                        Sign In to Kira Wallet
+                    <button type="submit" id="kira-submit-btn" class="w-full py-3.5 rounded-2xl bg-[#0062eb] hover:bg-blue-700 text-white font-extrabold text-sm shadow-lg shadow-blue-500/25 transition active:scale-[0.99] cursor-pointer">
+                        Sign In
                     </button>
                 </form>
 
-                <div class="mt-4 text-center">
-                    <button type="button" onclick="handleForgotPassword()" class="text-xs font-bold text-[#0062eb] hover:underline">
+                <div id="kira-forgot-wrap" class="mt-4 text-center">
+                    <button type="button" onclick="handleForgotPassword()" class="text-xs font-bold text-[#0062eb] hover:underline cursor-pointer">
                         Forgot Password?
                     </button>
                 </div>
@@ -139,8 +144,8 @@ function injectAuthAndSecurityUI() {
                 <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-[#eef5ff] text-[#0062eb] flex items-center justify-center font-black text-xl">
                     🔒
                 </div>
-                <h3 class="text-base font-black text-slate-900" id="pin-modal-title">Authorize Action</h3>
-                <p class="text-xs text-slate-500 font-medium mt-1 mb-4" id="pin-modal-desc">Enter your 4-digit Kira Security PIN</p>
+                <h3 class="text-base font-black text-slate-900" id="pin-modal-title">Approve Transaction</h3>
+                <p class="text-xs text-slate-500 font-medium mt-1 mb-4" id="pin-modal-desc">Enter your 4-digit Wallet PIN</p>
                 
                 <form onsubmit="confirmPinModal(event)" class="space-y-3">
                     <input type="password" id="pin-modal-input" maxlength="4" inputmode="numeric" placeholder="••••" required class="w-full py-3 rounded-xl border-2 border-blue-200 focus:border-[#0062eb] text-center text-xl font-black tracking-[0.5em] outline-none" />
@@ -150,7 +155,7 @@ function injectAuthAndSecurityUI() {
                             Cancel
                         </button>
                         <button type="submit" class="py-2.5 rounded-xl bg-[#0062eb] hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition">
-                            Verify PIN
+                            Confirm
                         </button>
                     </div>
                 </form>
@@ -160,8 +165,8 @@ function injectAuthAndSecurityUI() {
         <!-- 3. FLOATING USER SESSION & SIGN-OUT PILL (Top-Right) -->
         <div id="kira-session-pill" class="hidden fixed top-3 right-3 z-50 flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-md border border-blue-100">
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span id="kira-user-display" class="text-[11px] font-extrabold text-slate-700 max-w-[140px] truncate">User</span>
-            <button onclick="handleSignOut()" class="text-[10px] font-extrabold text-red-600 bg-red-50 hover:bg-red-100 px-2.5 py-0.5 rounded-full transition">
+            <span id="kira-user-display" class="text-[11px] font-extrabold text-slate-700 max-w-[140px] truncate">Wallet Active</span>
+            <button onclick="handleSignOut()" class="text-[10px] font-extrabold text-red-600 bg-red-50 hover:bg-red-100 px-2.5 py-0.5 rounded-full transition cursor-pointer">
                 Sign Out
             </button>
         </div>
@@ -173,38 +178,59 @@ window.switchAuthMode = function(mode) {
     authMode = mode;
     const isSignup = mode === 'signup';
 
-    const loginTab = document.getElementById('auth-tab-login');
-    const signupTab = document.getElementById('auth-tab-signup');
+    const loginTab = document.getElementById('kira-tab-login');
+    const signupTab = document.getElementById('kira-tab-signup');
     if (loginTab && signupTab) {
         loginTab.className = !isSignup
-            ? 'py-2.5 rounded-xl text-xs font-extrabold bg-[#0062eb] text-white shadow-xs transition-all'
-            : 'py-2.5 rounded-xl text-xs font-extrabold text-slate-600 hover:text-slate-900 transition-all';
+            ? 'py-2.5 rounded-xl text-xs font-extrabold bg-[#0062eb] text-white shadow-xs transition-all cursor-pointer'
+            : 'py-2.5 rounded-xl text-xs font-extrabold text-slate-600 hover:text-slate-900 transition-all cursor-pointer';
         signupTab.className = isSignup
-            ? 'py-2.5 rounded-xl text-xs font-extrabold bg-[#0062eb] text-white shadow-xs transition-all'
-            : 'py-2.5 rounded-xl text-xs font-extrabold text-slate-600 hover:text-slate-900 transition-all';
+            ? 'py-2.5 rounded-xl text-xs font-extrabold bg-[#0062eb] text-white shadow-xs transition-all cursor-pointer'
+            : 'py-2.5 rounded-xl text-xs font-extrabold text-slate-600 hover:text-slate-900 transition-all cursor-pointer';
     }
 
-    document.getElementById('auth-name-wrap')?.classList.toggle('hidden', !isSignup);
-    document.getElementById('auth-pin-wrap')?.classList.toggle('hidden', !isSignup);
+    document.getElementById('kira-name-wrap')?.classList.toggle('hidden', !isSignup);
+    document.getElementById('kira-pin-wrap')?.classList.toggle('hidden', !isSignup);
+    document.getElementById('kira-forgot-wrap')?.classList.toggle('hidden', isSignup);
 
-    const submitBtn = document.getElementById('auth-submit-btn');
-    if (submitBtn) submitBtn.textContent = isSignup ? 'Create My Kira Wallet' : 'Sign In to Kira Wallet';
+    const subtitleEl = document.getElementById('kira-auth-subtitle');
+    if (subtitleEl) {
+        subtitleEl.textContent = isSignup
+            ? 'Create your account to track BNPL & Shariah installments'
+            : 'Sign in to manage your BNPL installments & budget';
+    }
 
-    const msgEl = document.getElementById('auth-feedback-msg');
+    const submitBtn = document.getElementById('kira-submit-btn');
+    if (submitBtn) {
+        submitBtn.textContent = isSignup ? 'Create Free Account' : 'Sign In';
+    }
+
+    const msgEl = document.getElementById('kira-auth-msg');
     if (msgEl) msgEl.textContent = '';
 };
 
+// Backwards-compatible alias in case index.html still calls switchAuthTab
+window.switchAuthTab = window.switchAuthMode;
+
 window.handleAuthSubmit = async function(e) {
     e.preventDefault();
-    const email = document.getElementById('auth-input-email')?.value.trim();
-    const password = document.getElementById('auth-input-password')?.value;
-    const fullName = document.getElementById('auth-input-name')?.value.trim() || email.split('@')[0];
-    const adminPin = document.getElementById('auth-input-pin')?.value.trim() || '1234';
-    const msgEl = document.getElementById('auth-feedback-msg');
-    const btnEl = document.getElementById('auth-submit-btn');
+    const email = document.getElementById('kira-input-email')?.value.trim();
+    const password = document.getElementById('kira-input-password')?.value;
+    const fullName = document.getElementById('kira-input-name')?.value.trim() || email.split('@')[0];
+    const adminPin = document.getElementById('kira-input-pin')?.value.trim() || '1234';
+    const msgEl = document.getElementById('kira-auth-msg');
+    const btnEl = document.getElementById('kira-submit-btn');
 
-    if (msgEl) msgEl.textContent = '';
-    if (btnEl) btnEl.disabled = true;
+    if (!email || !password) return;
+
+    if (msgEl) {
+        msgEl.className = 'text-xs font-bold text-center min-h-[18px] text-blue-600';
+        msgEl.textContent = authMode === 'signup' ? 'Creating your wallet...' : 'Signing you in...';
+    }
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = authMode === 'signup' ? 'Setting Up Account...' : 'Signing In...';
+    }
 
     try {
         if (authMode === 'signup') {
@@ -217,36 +243,65 @@ window.handleAuthSubmit = async function(e) {
             });
             if (error) throw error;
 
-            if (data?.session) {
+            // If email confirmation is OFF, session is returned immediately
+            if (data?.session?.user) {
+                currentUser = data.session.user;
+                document.getElementById('kira-auth-overlay')?.classList.add('hidden');
+                document.getElementById('kira-session-pill')?.classList.remove('hidden');
                 showToast(`Welcome to Kira Wallet, ${fullName}!`);
-            } else {
-                if (msgEl) {
-                    msgEl.className = 'text-xs font-bold text-center min-h-[18px] text-emerald-600';
-                    msgEl.textContent = 'Account created! Check your email or sign in directly.';
+                await loadAppData();
+                subscribeToRealtimeSync();
+            } else if (data?.user) {
+                // Attempt automatic sign-in right away
+                const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+                if (!signInErr && signInData?.session?.user) {
+                    currentUser = signInData.session.user;
+                    document.getElementById('kira-auth-overlay')?.classList.add('hidden');
+                    document.getElementById('kira-session-pill')?.classList.remove('hidden');
+                    showToast(`Welcome to Kira Wallet, ${fullName}!`);
+                    await loadAppData();
+                    subscribeToRealtimeSync();
+                } else {
+                    if (msgEl) {
+                        msgEl.className = 'text-xs font-bold text-center min-h-[18px] text-emerald-600';
+                        msgEl.textContent = 'Account created! Please disable "Confirm email" in Supabase or check your inbox.';
+                    }
+                    switchAuthMode('login');
                 }
             }
         } else {
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
-            showToast('Signed in successfully!');
+
+            if (data?.session?.user) {
+                currentUser = data.session.user;
+                document.getElementById('kira-auth-overlay')?.classList.add('hidden');
+                document.getElementById('kira-session-pill')?.classList.remove('hidden');
+                showToast('Signed in successfully!');
+                await loadAppData();
+                subscribeToRealtimeSync();
+            }
         }
     } catch (err) {
         if (msgEl) {
             msgEl.className = 'text-xs font-bold text-center min-h-[18px] text-red-600';
-            msgEl.textContent = err.message || 'Authentication failed.';
+            msgEl.textContent = err.message || 'Unable to authenticate. Please try again.';
         }
     } finally {
-        if (btnEl) btnEl.disabled = false;
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.textContent = authMode === 'signup' ? 'Create Free Account' : 'Sign In';
+        }
     }
 };
 
 window.handleForgotPassword = async function() {
-    const email = document.getElementById('auth-input-email')?.value.trim();
-    const msgEl = document.getElementById('auth-feedback-msg');
+    const email = document.getElementById('kira-input-email')?.value.trim();
+    const msgEl = document.getElementById('kira-auth-msg');
     if (!email) {
         if (msgEl) {
             msgEl.className = 'text-xs font-bold text-center min-h-[18px] text-red-600';
-            msgEl.textContent = 'Please enter your email address first.';
+            msgEl.textContent = 'Enter your email address above first to reset your password.';
         }
         return;
     }
@@ -267,8 +322,13 @@ window.handleSignOut = async function() {
         realtimeChannel = null;
     }
     await supabase.auth.signOut();
+    currentUser = null;
+    currentProfile = null;
+    document.getElementById('kira-auth-overlay')?.classList.remove('hidden');
+    document.getElementById('kira-session-pill')?.classList.add('hidden');
     showToast('Signed out of Kira Wallet.');
 };
+window.handleLogout = window.handleSignOut;
 
 // Prompt for 4-Digit Security PIN before sensitive actions
 function requestPinAuthorization(title, description, onVerifiedCallback) {
@@ -279,8 +339,8 @@ function requestPinAuthorization(title, description, onVerifiedCallback) {
     const inputEl = document.getElementById('pin-modal-input');
     const errEl = document.getElementById('pin-modal-error');
 
-    if (titleEl) titleEl.textContent = title || 'Authorize Action';
-    if (descEl) descEl.textContent = description || 'Enter your 4-digit Kira Security PIN';
+    if (titleEl) titleEl.textContent = title || 'Approve Transaction';
+    if (descEl) descEl.textContent = description || 'Enter your 4-digit Wallet PIN';
     if (errEl) errEl.textContent = '';
     if (inputEl) {
         inputEl.value = '';
@@ -298,10 +358,10 @@ window.confirmPinModal = async function(e) {
     e.preventDefault();
     const enteredPin = document.getElementById('pin-modal-input')?.value.trim();
     const errEl = document.getElementById('pin-modal-error');
-    const expectedPin = currentProfile?.admin_pin || '1234';
+    const expectedPin = currentProfile?.admin_pin || currentUser?.user_metadata?.admin_pin || '1234';
 
     if (enteredPin !== expectedPin) {
-        if (errEl) errEl.textContent = 'Incorrect Security PIN. Try again.';
+        if (errEl) errEl.textContent = 'Incorrect Wallet PIN. Please try again.';
         return;
     }
 
@@ -313,18 +373,38 @@ window.confirmPinModal = async function(e) {
 };
 
 // ============================================================================
-// 2. LOAD DATA, AUTO-SEED EXISTING ACCOUNTS & REALTIME SYNC
+// 2. FAULT-TOLERANT USER PROVISIONING & DATA LOADER
 // ============================================================================
 async function ensureStarterDataForUser() {
     if (!currentUser) return;
 
-    // If an existing user logs in and has 0 BNPL rows, auto-seed the 5 Malaysian providers
-    const { count } = await supabase
-        .from('bnpl_accounts')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', currentUser.id);
+    const metaName = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User';
+    const metaPin = currentUser.user_metadata?.admin_pin || '1234';
 
-    if (count === 0) {
+    // 1. Ensure user_profiles row exists
+    const { data: existingProf } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+
+    if (!existingProf) {
+        await supabase.from('user_profiles').insert([{
+            id: currentUser.id,
+            full_name: metaName,
+            email: currentUser.email,
+            admin_pin: metaPin
+        }]);
+    }
+
+    // 2. Ensure starter BNPL accounts exist for this user
+    const { data: existingAccs } = await supabase
+        .from('bnpl_accounts')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .limit(1);
+
+    if (!existingAccs || existingAccs.length === 0) {
         const today = new Date();
         const addDays = (d) => {
             const dt = new Date(today);
@@ -341,7 +421,7 @@ async function ensureStarterDataForUser() {
         ]);
     }
 
-    // Ensure user_budget row exists
+    // 3. Ensure user_budget row exists
     const { data: existingBudget } = await supabase
         .from('user_budget')
         .select('id')
@@ -356,35 +436,38 @@ async function ensureStarterDataForUser() {
 }
 
 async function loadAppData() {
-    if (!currentUser) return;
+    if (!currentUser || isFetchingData) return;
+    isFetchingData = true;
 
     try {
         await ensureStarterDataForUser();
 
-        const [profRes, accRes, budRes, dispRes, histRes] = await Promise.all([
+        const [profRes, accRes, budRes, dispRes] = await Promise.all([
             supabase.from('user_profiles').select('*').eq('id', currentUser.id).maybeSingle(),
             supabase.from('bnpl_accounts').select('*').eq('user_id', currentUser.id).order('outstanding_amount', { ascending: false }),
             supabase.from('user_budget').select('*').eq('user_id', currentUser.id).maybeSingle(),
-            supabase.from('disputes').select('*').eq('user_id', currentUser.id).order('dispute_date', { ascending: false }),
-            supabase.from('payment_history').select('*').eq('user_id', currentUser.id).order('paid_at', { ascending: false }).limit(10)
+            supabase.from('disputes').select('*').eq('user_id', currentUser.id).order('dispute_date', { ascending: false })
         ]);
 
-        if (profRes.data) {
-            currentProfile = profRes.data;
-            const userLabel = document.getElementById('kira-user-display');
-            if (userLabel) userLabel.textContent = currentProfile.full_name || currentUser.email;
+        currentProfile = profRes.data || {
+            full_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0],
+            admin_pin: currentUser.user_metadata?.admin_pin || '1234'
+        };
+
+        const userLabel = document.getElementById('kira-user-display');
+        if (userLabel) {
+            userLabel.textContent = currentProfile.full_name || currentUser.email;
         }
 
-        if (accRes.error) console.error('Supabase bnpl_accounts error:', accRes.error.message);
-        else accountsData = accRes.data || [];
-
+        if (!accRes.error) accountsData = accRes.data || [];
         if (budRes.data) budgetData = budRes.data;
         if (dispRes.data) disputesData = dispRes.data || [];
-        if (histRes.data) paymentHistoryData = histRes.data || [];
 
         renderAll();
     } catch (err) {
         console.error('Initialization error:', err);
+    } finally {
+        isFetchingData = false;
     }
 }
 
@@ -414,7 +497,7 @@ function renderAll() {
     renderConsentCentre();
 }
 
-// --- VIEW 1: HOME (with Privacy Mask, Overdue Banner & Credit Utilization Bars) ---
+// --- VIEW 1: HOME ---
 window.toggleBalanceMask = function() {
     isBalanceMasked = !isBalanceMasked;
     renderAll();
@@ -432,7 +515,6 @@ function renderHome(connected) {
     if (totalValEl) totalValEl.textContent = displayMoney(totalOutstanding);
     if (activeCountEl) activeCountEl.textContent = connected.length;
 
-    // Check for overdue accounts
     const overdueList = connected.filter(a => getDynamicStatus(a.repayment_status, a.repayment_date) === 'Unpaid');
     if (overdueList.length > 0) {
         overdueBanner?.classList.remove('hidden');
@@ -483,10 +565,10 @@ function renderHome(connected) {
     }).join('');
 }
 
-// --- VIEW 2: CALENDAR (Interactive Day Filter + 1-Tap Pay Now) ---
+// --- VIEW 2: CALENDAR ---
 window.changeMonth = function(offset) {
     currentCalMonth += offset;
-    selectedCalDay = null; // Reset day filter on month change
+    selectedCalDay = null;
     if (currentCalMonth > 11) {
         currentCalMonth = 0;
         currentCalYear++;
@@ -703,7 +785,7 @@ async function executeSinglePayment(acc) {
     const paidAmount = Number(acc.next_repayment_amount);
     const newOutstanding = Math.max(0, Number(acc.outstanding_amount) - paidAmount);
 
-    // Attempt Atomic PostgreSQL RPC first, fallback to standard update + ledger insert
+    // Pass raw UUID string (acc.id) to RPC
     const { error: rpcError } = await supabase.rpc('settle_bnpl_installment', {
         p_account_id: acc.id
     });
@@ -743,12 +825,12 @@ window.payInstallment = function(id) {
     const paidAmount = Number(acc.next_repayment_amount);
     requestPinAuthorization(
         `Pay ${acc.provider}`,
-        `Confirm instant FPX payment of RM ${formatRM(paidAmount)}`,
+        `Approve instant payment of RM ${formatRM(paidAmount)}`,
         async () => {
             const ok = await executeSinglePayment(acc);
             if (ok) {
                 showToast(`Paid RM ${formatRM(paidAmount)} to ${acc.provider}!`);
-                await loadAppData();
+                renderAll();
             }
         }
     );
@@ -763,8 +845,8 @@ window.payAllDueInstallments = function() {
 
     const totalToSettle = dueAccounts.reduce((s, a) => s + Number(a.next_repayment_amount), 0);
     requestPinAuthorization(
-        'Settle All Due BNPL',
-        `Authorize RM ${formatRM(totalToSettle)} across ${dueAccounts.length} providers`,
+        'Settle All Due Installments',
+        `Approve RM ${formatRM(totalToSettle)} across ${dueAccounts.length} providers`,
         async () => {
             let totalSettled = 0;
             for (const acc of dueAccounts) {
@@ -772,7 +854,7 @@ window.payAllDueInstallments = function() {
                 if (ok) totalSettled += Number(acc.next_repayment_amount);
             }
             showToast(`Settled RM ${formatRM(totalSettled)} across ${dueAccounts.length} providers!`);
-            await loadAppData();
+            renderAll();
         }
     );
 };
@@ -877,7 +959,6 @@ function renderBudget(connected) {
         .filter(a => getDynamicStatus(a.repayment_status, a.repayment_date) !== 'Paid')
         .reduce((sum, a) => sum + Number(a.next_repayment_amount), 0);
 
-    // Add Simulated Pre-Purchase Installment
     const simPrice = Number(document.getElementById('sim-price-slider')?.value || 0);
     const simMonthlyAdd = simPrice / simTenure;
 
@@ -914,7 +995,6 @@ function renderBudget(connected) {
     if (impactBar) impactBar.style.width = `${totalImpactPct}%`;
     if (impactPctEl) impactPctEl.textContent = `${totalImpactPct}%`;
 
-    // Dynamic Risk Assessment Styling
     if (totalImpactPct > 80) {
         if (impactBar) impactBar.className = 'bg-red-500 h-full rounded-full transition-all duration-500';
         if (impactPctEl) impactPctEl.className = 'text-red-600 font-black text-base';
@@ -933,7 +1013,6 @@ function renderBudget(connected) {
     }
 }
 
-// Editable Budget Modal Handlers (Tenant-Isolated Supabase Upsert)
 window.openBudgetModal = function() {
     document.getElementById('input-budget-income').value = budgetData.income;
     document.getElementById('input-budget-expenses').value = budgetData.expenses;
@@ -967,14 +1046,14 @@ window.saveBudget = async function(e) {
             budgetData.expenses = newExpenses;
         }
         closeBudgetModal();
-        showToast('Monthly budget updated in Supabase!');
+        showToast('Monthly budget updated!');
         renderAll();
     } else {
         showToast(`Error saving budget: ${error.message}`);
     }
 };
 
-// --- VIEW 5: MORE & SUBMIT NEW DISPUTE MODAL (Tenant-Isolated Supabase Insert) ---
+// --- VIEW 5: MORE & SUBMIT NEW DISPUTE MODAL ---
 function renderMore() {
     const listEl = document.getElementById('disputes-list');
     if (!listEl) return;
@@ -1037,7 +1116,7 @@ window.submitDispute = async function(e) {
     }
 };
 
-// --- VIEW 6: CONSENT CENTRE (PIN-Protected Open Finance Connection Toggle) ---
+// --- VIEW 6: CONSENT CENTRE ---
 function renderConsentCentre() {
     const listEl = document.getElementById('consent-list');
     if (!listEl) return;
@@ -1068,8 +1147,8 @@ window.toggleAccountConnection = function(id, currentState) {
 
     const newState = !currentState;
     requestPinAuthorization(
-        newState ? `Connect ${item.provider}` : `Disconnect ${item.provider}`,
-        `Enter your 4-digit PIN to ${newState ? 'grant' : 'revoke'} Open Finance API access`,
+        newState ? `Link ${item.provider}` : `Unlink ${item.provider}`,
+        `Enter your 4-digit PIN to ${newState ? 'connect' : 'disconnect'} ${item.provider}`,
         async () => {
             const { error } = await supabase
                 .from('bnpl_accounts')
@@ -1119,7 +1198,7 @@ window.switchTab = function(tab) {
 };
 
 // ============================================================================
-// 4. BOOTSTRAP AUTHENTICATION & APPLICATION LIFECYCLE
+// 4. BOOTSTRAP AUTHENTICATION (Non-Blocking Supabase v2 Pattern)
 // ============================================================================
 document.addEventListener('DOMContentLoaded', async () => {
     injectAuthAndSecurityUI();
@@ -1140,16 +1219,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         sessionPill?.classList.add('hidden');
     }
 
-    // Listen for live login / logout / token refresh events
-    supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    // IMPORTANT: Defer async Supabase queries with setTimeout(..., 0) to prevent Supabase v2 lock deadlocks
+    supabase.auth.onAuthStateChange((_event, newSession) => {
         if (newSession?.user) {
             const isNewUserLogin = !currentUser || currentUser.id !== newSession.user.id;
             currentUser = newSession.user;
             authOverlay?.classList.add('hidden');
             sessionPill?.classList.remove('hidden');
             if (isNewUserLogin) {
-                await loadAppData();
-                subscribeToRealtimeSync();
+                setTimeout(() => {
+                    loadAppData();
+                    subscribeToRealtimeSync();
+                }, 0);
             }
         } else {
             currentUser = null;
