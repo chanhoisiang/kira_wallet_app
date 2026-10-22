@@ -1147,19 +1147,44 @@ window.toggleAccountConnection = function(id, currentState) {
 
     const newState = !currentState;
     requestPinAuthorization(
-        newState ? `Link ${item.provider}` : `Unlink ${item.provider}`,
-        `Enter your 4-digit PIN to ${newState ? 'connect' : 'disconnect'} ${item.provider}`,
+        newState ? `Connect ${item.provider}` : `Disconnect ${item.provider}`,
+        `Enter your 4-digit PIN to ${newState ? 'fetch bills via Open Finance API' : 'revoke access'}`,
         async () => {
+            // Restore demo balances when connecting, zero them out when disconnecting
+            const restoredAmounts = {
+                'SPayLater': { out: 450.00, next: 150.00 },
+                'Atome': { out: 360.00, next: 120.00 },
+                'Grab PayLater': { out: 200.00, next: 200.00 },
+                "Touch 'n Go PayLater": { out: 120.00, next: 40.00 },
+                'hoolah': { out: 180.00, next: 60.00 }
+            };
+
+            const defaults = restoredAmounts[item.provider] || { out: 250.00, next: 80.00 };
+            const newOutstanding = newState ? defaults.out : 0.00;
+            const newNextRepayment = newState ? defaults.next : 0.00;
+            const newStatus = newState ? 'Upcoming' : 'Paid';
+
             const { error } = await supabase
                 .from('bnpl_accounts')
-                .update({ is_connected: newState })
+                .update({ 
+                    is_connected: newState,
+                    outstanding_amount: newOutstanding,
+                    next_repayment_amount: newNextRepayment,
+                    repayment_status: newStatus
+                })
                 .eq('id', item.id)
                 .eq('user_id', currentUser.id);
 
             if (!error) {
                 item.is_connected = newState;
-                showToast(newState ? `${item.provider} connected!` : `${item.provider} disconnected!`);
+                item.outstanding_amount = newOutstanding;
+                item.next_repayment_amount = newNextRepayment;
+                item.repayment_status = newStatus;
+
+                showToast(newState ? `Successfully synced bills from ${item.provider}!` : `Disconnected ${item.provider}.`);
                 renderAll();
+            } else {
+                showToast(`Connection error: ${error.message}`);
             }
         }
     );
