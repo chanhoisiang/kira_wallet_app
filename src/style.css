@@ -55,3 +55,181 @@ body {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: white;
 }
+
+/* ==========================================
+   KIRA WALLET AUTHENTICATION OVERLAY STYLES
+   ========================================== */
+   .auth-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: linear-gradient(145deg, #0f172a 0%, #1e1b4b 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    transition: opacity 0.25s ease;
+  }
+  
+  .auth-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+    display: none;
+  }
+  
+  .auth-card {
+    width: 100%;
+    max-width: 390px;
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 24px;
+    padding: 28px 24px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+    color: #0f172a;
+  }
+  
+  .auth-brand {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .auth-logo-badge {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 10px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #4f46e5, #06b6d4);
+    color: #fff;
+    font-size: 24px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
+  }
+  
+  .auth-brand h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+  }
+  
+  .auth-brand p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #64748b;
+  }
+  
+  .auth-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+  }
+  
+  .auth-tab {
+    border: none;
+    background: transparent;
+    padding: 9px 12px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .auth-tab.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+  
+  .auth-input-group {
+    margin-bottom: 14px;
+  }
+  
+  .auth-input-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+  }
+  
+  .auth-input-group input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  
+  .auth-input-group input:focus {
+    border-color: #4f46e5;
+  }
+  
+  .auth-error-msg {
+    font-size: 12px;
+    color: #ef4444;
+    margin-bottom: 12px;
+    min-height: 16px;
+    text-align: center;
+  }
+  
+  .auth-submit-btn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #4f46e5, #3b82f6);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(79, 70, 229, 0.25);
+  }
+  
+  .auth-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  .auth-footer-links {
+    margin-top: 14px;
+    text-align: center;
+  }
+  
+  .auth-link-btn {
+    background: none;
+    border: none;
+    color: #4f46e5;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  
+  .user-session-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: rgba(15, 23, 42, 0.04);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .logout-pill-btn {
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+  }

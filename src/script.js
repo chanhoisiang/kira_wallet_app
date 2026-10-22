@@ -1,15 +1,23 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-// 1. Initialize Supabase (Replace with your project URL & Anon Key)
+// 1. Initialize Supabase
 const SUPABASE_URL = 'https://mqlsvfzsavioppmejuze.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xbHN2ZnpzYXZpb3BwbWVqdXplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwNTUxNzAsImV4cCI6MjEwNzYzMTE3MH0.eN9XQ3Ecw40N0XemfB0WV_1qXsVWOCzztwlIfhdVUMo';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Global State
+// Global Data State
 let accountsData = [];
-let budgetData = { id: 1, income: 5000, expenses: 3200 };
+let budgetData = { id: null, income: 5000, expenses: 3200 };
 let disputesData = [];
+let paymentHistoryData = [];
 let chartInstance = null;
+
+// Auth & Backend Session State
+let currentUser = null;
+let currentProfile = null;
+let authMode = 'login'; // 'login' | 'signup'
+let realtimeChannel = null;
+let pendingPinCallback = null;
 
 // Interactive UI State
 let isBalanceMasked = false;
@@ -60,20 +68,319 @@ function getDynamicStatus(status, dateStr) {
     return dueDate >= today ? 'Upcoming' : 'Unpaid';
 }
 
-// 2. Load All Data from Supabase
-async function loadAppData() {
+// ============================================================================
+// AUTHENTICATION, PIN MODAL & SESSION UI INJECTION (No HTML edits needed!)
+// ============================================================================
+function injectAuthAndSecurityUI() {
+    if (document.getElementById('kira-auth-overlay')) return;
+
+    const uiWrapper = document.createElement('div');
+    uiWrapper.innerHTML = `
+        <!-- 1. FULL-SCREEN AUTHENTICATION GATE OVERLAY -->
+        <div id="kira-auth-overlay" class="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4 transition-all">
+            <div class="w-full max-w-md bg-white rounded-3xl p-6 md:p-8 shadow-2xl border border-blue-100">
+                <div class="text-center mb-6">
+                    <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-[#0062eb] text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                        K
+                    </div>
+                    <h2 class="text-2xl font-black text-slate-900">Kira Wallet</h2>
+                    <p class="text-xs font-semibold text-slate-500 mt-1">Open Finance BNPL & Shariah Installment Hub</p>
+                </div>
+
+                <!-- Sign In / Sign Up Switcher -->
+                <div class="grid grid-cols-2 bg-[#eef5ff] p-1 rounded-2xl mb-5 border border-blue-100">
+                    <button type="button" id="auth-tab-login" onclick="switchAuthMode('login')" class="py-2.5 rounded-xl text-xs font-extrabold bg-[#0062eb] text-white shadow-xs transition-all">
+                        Sign In
+                    </button>
+                    <button type="button" id="auth-tab-signup" onclick="switchAuthMode('signup')" class="py-2.5 rounded-xl text-xs font-extrabold text-slate-600 hover:text-slate-900 transition-all">
+                        Create Account
+                    </button>
+                </div>
+
+                <form id="kira-auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                    <div id="auth-name-wrap" class="hidden">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+                        <input type="text" id="auth-input-name" placeholder="e.g. Chan Hoi Siang" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-semibold outline-none transition" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                        <input type="email" id="auth-input-email" placeholder="name@example.com" required class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-semibold outline-none transition" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                        <input type="password" id="auth-input-password" placeholder="••••••••" minlength="6" required class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-semibold outline-none transition" />
+                    </div>
+
+                    <div id="auth-pin-wrap" class="hidden">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Set 4-Digit Security PIN (For Payments & API Consent)</label>
+                        <input type="password" id="auth-input-pin" placeholder="1234" maxlength="4" pattern="\\d{4}" inputmode="numeric" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-black tracking-widest text-center outline-none transition" />
+                    </div>
+
+                    <p id="auth-feedback-msg" class="text-xs font-bold text-center min-h-[18px] text-red-600"></p>
+
+                    <button type="submit" id="auth-submit-btn" class="w-full py-3.5 rounded-2xl bg-[#0062eb] hover:bg-blue-700 text-white font-extrabold text-sm shadow-lg shadow-blue-500/25 transition active:scale-[0.99]">
+                        Sign In to Kira Wallet
+                    </button>
+                </form>
+
+                <div class="mt-4 text-center">
+                    <button type="button" onclick="handleForgotPassword()" class="text-xs font-bold text-[#0062eb] hover:underline">
+                        Forgot Password?
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 4-DIGIT SECURITY PIN VERIFICATION MODAL -->
+        <div id="kira-pin-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div class="w-full max-w-xs bg-white rounded-3xl p-6 shadow-2xl border border-blue-100 text-center">
+                <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-[#eef5ff] text-[#0062eb] flex items-center justify-center font-black text-xl">
+                    🔒
+                </div>
+                <h3 class="text-base font-black text-slate-900" id="pin-modal-title">Authorize Action</h3>
+                <p class="text-xs text-slate-500 font-medium mt-1 mb-4" id="pin-modal-desc">Enter your 4-digit Kira Security PIN</p>
+                
+                <form onsubmit="confirmPinModal(event)" class="space-y-3">
+                    <input type="password" id="pin-modal-input" maxlength="4" inputmode="numeric" placeholder="••••" required class="w-full py-3 rounded-xl border-2 border-blue-200 focus:border-[#0062eb] text-center text-xl font-black tracking-[0.5em] outline-none" />
+                    <p id="pin-modal-error" class="text-[11px] font-bold text-red-600 min-h-[16px]"></p>
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button type="button" onclick="closePinModal()" class="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
+                            Cancel
+                        </button>
+                        <button type="submit" class="py-2.5 rounded-xl bg-[#0062eb] hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition">
+                            Verify PIN
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 3. FLOATING USER SESSION & SIGN-OUT PILL (Top-Right) -->
+        <div id="kira-session-pill" class="hidden fixed top-3 right-3 z-50 flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-md border border-blue-100">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span id="kira-user-display" class="text-[11px] font-extrabold text-slate-700 max-w-[140px] truncate">User</span>
+            <button onclick="handleSignOut()" class="text-[10px] font-extrabold text-red-600 bg-red-50 hover:bg-red-100 px-2.5 py-0.5 rounded-full transition">
+                Sign Out
+            </button>
+        </div>
+    `;
+    document.body.appendChild(uiWrapper);
+}
+
+window.switchAuthMode = function(mode) {
+    authMode = mode;
+    const isSignup = mode === 'signup';
+
+    const loginTab = document.getElementById('auth-tab-login');
+    const signupTab = document.getElementById('auth-tab-signup');
+    if (loginTab && signupTab) {
+        loginTab.className = !isSignup
+            ? 'py-2.5 rounded-xl text-xs font-extrabold bg-[#0062eb] text-white shadow-xs transition-all'
+            : 'py-2.5 rounded-xl text-xs font-extrabold text-slate-600 hover:text-slate-900 transition-all';
+        signupTab.className = isSignup
+            ? 'py-2.5 rounded-xl text-xs font-extrabold bg-[#0062eb] text-white shadow-xs transition-all'
+            : 'py-2.5 rounded-xl text-xs font-extrabold text-slate-600 hover:text-slate-900 transition-all';
+    }
+
+    document.getElementById('auth-name-wrap')?.classList.toggle('hidden', !isSignup);
+    document.getElementById('auth-pin-wrap')?.classList.toggle('hidden', !isSignup);
+
+    const submitBtn = document.getElementById('auth-submit-btn');
+    if (submitBtn) submitBtn.textContent = isSignup ? 'Create My Kira Wallet' : 'Sign In to Kira Wallet';
+
+    const msgEl = document.getElementById('auth-feedback-msg');
+    if (msgEl) msgEl.textContent = '';
+};
+
+window.handleAuthSubmit = async function(e) {
+    e.preventDefault();
+    const email = document.getElementById('auth-input-email')?.value.trim();
+    const password = document.getElementById('auth-input-password')?.value;
+    const fullName = document.getElementById('auth-input-name')?.value.trim() || email.split('@')[0];
+    const adminPin = document.getElementById('auth-input-pin')?.value.trim() || '1234';
+    const msgEl = document.getElementById('auth-feedback-msg');
+    const btnEl = document.getElementById('auth-submit-btn');
+
+    if (msgEl) msgEl.textContent = '';
+    if (btnEl) btnEl.disabled = true;
+
     try {
-        const [accRes, budRes, dispRes] = await Promise.all([
-            supabase.from('bnpl_accounts').select('*').order('outstanding_amount', { ascending: false }),
-            supabase.from('user_budget').select('*').single(),
-            supabase.from('disputes').select('*').order('dispute_date', { ascending: false })
+        if (authMode === 'signup') {
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: { full_name: fullName, admin_pin: adminPin }
+                }
+            });
+            if (error) throw error;
+
+            if (data?.session) {
+                showToast(`Welcome to Kira Wallet, ${fullName}!`);
+            } else {
+                if (msgEl) {
+                    msgEl.className = 'text-xs font-bold text-center min-h-[18px] text-emerald-600';
+                    msgEl.textContent = 'Account created! Check your email or sign in directly.';
+                }
+            }
+        } else {
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            showToast('Signed in successfully!');
+        }
+    } catch (err) {
+        if (msgEl) {
+            msgEl.className = 'text-xs font-bold text-center min-h-[18px] text-red-600';
+            msgEl.textContent = err.message || 'Authentication failed.';
+        }
+    } finally {
+        if (btnEl) btnEl.disabled = false;
+    }
+};
+
+window.handleForgotPassword = async function() {
+    const email = document.getElementById('auth-input-email')?.value.trim();
+    const msgEl = document.getElementById('auth-feedback-msg');
+    if (!email) {
+        if (msgEl) {
+            msgEl.className = 'text-xs font-bold text-center min-h-[18px] text-red-600';
+            msgEl.textContent = 'Please enter your email address first.';
+        }
+        return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin
+    });
+    if (msgEl) {
+        msgEl.className = error
+            ? 'text-xs font-bold text-center min-h-[18px] text-red-600'
+            : 'text-xs font-bold text-center min-h-[18px] text-emerald-600';
+        msgEl.textContent = error ? error.message : 'Password reset link sent to your email!';
+    }
+};
+
+window.handleSignOut = async function() {
+    if (realtimeChannel) {
+        supabase.removeChannel(realtimeChannel);
+        realtimeChannel = null;
+    }
+    await supabase.auth.signOut();
+    showToast('Signed out of Kira Wallet.');
+};
+
+// Prompt for 4-Digit Security PIN before sensitive actions
+function requestPinAuthorization(title, description, onVerifiedCallback) {
+    pendingPinCallback = onVerifiedCallback;
+    const modal = document.getElementById('kira-pin-modal');
+    const titleEl = document.getElementById('pin-modal-title');
+    const descEl = document.getElementById('pin-modal-desc');
+    const inputEl = document.getElementById('pin-modal-input');
+    const errEl = document.getElementById('pin-modal-error');
+
+    if (titleEl) titleEl.textContent = title || 'Authorize Action';
+    if (descEl) descEl.textContent = description || 'Enter your 4-digit Kira Security PIN';
+    if (errEl) errEl.textContent = '';
+    if (inputEl) {
+        inputEl.value = '';
+        setTimeout(() => inputEl.focus(), 50);
+    }
+    modal?.classList.remove('hidden');
+}
+
+window.closePinModal = function() {
+    pendingPinCallback = null;
+    document.getElementById('kira-pin-modal')?.classList.add('hidden');
+};
+
+window.confirmPinModal = async function(e) {
+    e.preventDefault();
+    const enteredPin = document.getElementById('pin-modal-input')?.value.trim();
+    const errEl = document.getElementById('pin-modal-error');
+    const expectedPin = currentProfile?.admin_pin || '1234';
+
+    if (enteredPin !== expectedPin) {
+        if (errEl) errEl.textContent = 'Incorrect Security PIN. Try again.';
+        return;
+    }
+
+    const cb = pendingPinCallback;
+    closePinModal();
+    if (typeof cb === 'function') {
+        await cb();
+    }
+};
+
+// ============================================================================
+// 2. LOAD DATA, AUTO-SEED EXISTING ACCOUNTS & REALTIME SYNC
+// ============================================================================
+async function ensureStarterDataForUser() {
+    if (!currentUser) return;
+
+    // If an existing user logs in and has 0 BNPL rows, auto-seed the 5 Malaysian providers
+    const { count } = await supabase
+        .from('bnpl_accounts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', currentUser.id);
+
+    if (count === 0) {
+        const today = new Date();
+        const addDays = (d) => {
+            const dt = new Date(today);
+            dt.setDate(dt.getDate() + d);
+            return dt.toISOString().split('T')[0];
+        };
+
+        await supabase.from('bnpl_accounts').insert([
+            { user_id: currentUser.id, provider: 'SPayLater', short_code: 'S', brand_class: 'bg-[#ee4d2d] text-white', outstanding_amount: 450, next_repayment_amount: 150, repayment_date: addDays(5), repayment_status: 'Upcoming', is_shariah: true, is_connected: true },
+            { user_id: currentUser.id, provider: 'Atome', short_code: 'A', brand_class: 'bg-[#facc15] text-slate-900', outstanding_amount: 360, next_repayment_amount: 120, repayment_date: addDays(12), repayment_status: 'Upcoming', is_shariah: true, is_connected: true },
+            { user_id: currentUser.id, provider: 'Grab PayLater', short_code: 'G', brand_class: 'bg-[#00b14f] text-white', outstanding_amount: 200, next_repayment_amount: 200, repayment_date: addDays(-2), repayment_status: 'Unpaid', is_shariah: true, is_connected: true },
+            { user_id: currentUser.id, provider: "Touch 'n Go PayLater", short_code: 'T', brand_class: 'bg-[#0062eb] text-white', outstanding_amount: 0, next_repayment_amount: 0, repayment_date: addDays(18), repayment_status: 'Paid', is_shariah: true, is_connected: false },
+            { user_id: currentUser.id, provider: 'hoolah', short_code: 'H', brand_class: 'bg-[#ff3366] text-white', outstanding_amount: 180, next_repayment_amount: 60, repayment_date: addDays(20), repayment_status: 'Upcoming', is_shariah: false, is_connected: false }
         ]);
+    }
+
+    // Ensure user_budget row exists
+    const { data: existingBudget } = await supabase
+        .from('user_budget')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+    if (!existingBudget) {
+        await supabase.from('user_budget').insert([
+            { user_id: currentUser.id, income: 5000, expenses: 3200 }
+        ]);
+    }
+}
+
+async function loadAppData() {
+    if (!currentUser) return;
+
+    try {
+        await ensureStarterDataForUser();
+
+        const [profRes, accRes, budRes, dispRes, histRes] = await Promise.all([
+            supabase.from('user_profiles').select('*').eq('id', currentUser.id).maybeSingle(),
+            supabase.from('bnpl_accounts').select('*').eq('user_id', currentUser.id).order('outstanding_amount', { ascending: false }),
+            supabase.from('user_budget').select('*').eq('user_id', currentUser.id).maybeSingle(),
+            supabase.from('disputes').select('*').eq('user_id', currentUser.id).order('dispute_date', { ascending: false }),
+            supabase.from('payment_history').select('*').eq('user_id', currentUser.id).order('paid_at', { ascending: false }).limit(10)
+        ]);
+
+        if (profRes.data) {
+            currentProfile = profRes.data;
+            const userLabel = document.getElementById('kira-user-display');
+            if (userLabel) userLabel.textContent = currentProfile.full_name || currentUser.email;
+        }
 
         if (accRes.error) console.error('Supabase bnpl_accounts error:', accRes.error.message);
         else accountsData = accRes.data || [];
 
         if (budRes.data) budgetData = budRes.data;
         if (dispRes.data) disputesData = dispRes.data || [];
+        if (histRes.data) paymentHistoryData = histRes.data || [];
 
         renderAll();
     } catch (err) {
@@ -81,7 +388,20 @@ async function loadAppData() {
     }
 }
 
-// 3. Render All Views
+function subscribeToRealtimeSync() {
+    if (!currentUser || realtimeChannel) return;
+
+    realtimeChannel = supabase
+        .channel(`kira-sync-${currentUser.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bnpl_accounts', filter: `user_id=eq.${currentUser.id}` }, () => loadAppData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'user_budget', filter: `user_id=eq.${currentUser.id}` }, () => loadAppData())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'disputes', filter: `user_id=eq.${currentUser.id}` }, () => loadAppData())
+        .subscribe();
+}
+
+// ============================================================================
+// 3. RENDER ALL VIEWS (100% Preserved UI & Logic)
+// ============================================================================
 function renderAll() {
     const shariahOnly = document.getElementById('toggleShariah')?.checked || false;
     const connectedAccounts = accountsData.filter(a => a.is_connected && (!shariahOnly || a.is_shariah));
@@ -107,8 +427,10 @@ function renderHome(connected) {
     const overdueTitle = document.getElementById('overdue-alert-title');
     
     const totalOutstanding = connected.reduce((sum, a) => sum + Number(a.outstanding_amount), 0);
-    document.getElementById('total-val').textContent = displayMoney(totalOutstanding);
-    document.getElementById('active-count-val').textContent = connected.length;
+    const totalValEl = document.getElementById('total-val');
+    const activeCountEl = document.getElementById('active-count-val');
+    if (totalValEl) totalValEl.textContent = displayMoney(totalOutstanding);
+    if (activeCountEl) activeCountEl.textContent = connected.length;
 
     // Check for overdue accounts
     const overdueList = connected.filter(a => getDynamicStatus(a.repayment_status, a.repayment_date) === 'Unpaid');
@@ -128,6 +450,8 @@ function renderHome(connected) {
     }
 
     emptyState?.classList.add('hidden');
+    if (!listEl) return;
+
     listEl.innerHTML = connected.map(acc => {
         const limit = CREDIT_LIMITS[acc.provider] || 1500;
         const usedPct = Math.min(100, Math.round((Number(acc.outstanding_amount) / limit) * 100));
@@ -374,54 +698,83 @@ function renderCalendarGrid(connected) {
     gridEl.innerHTML = cellsHTML;
 }
 
-// --- SUPABASE: 1-TAP PAY NOW & PAY ALL DUE ---
-window.payInstallment = async function(id) {
-    const acc = accountsData.find(a => a.id === id);
-    if (!acc) return;
-
+// --- SUPABASE: PIN-PROTECTED 1-TAP PAY NOW & PAY ALL DUE ---
+async function executeSinglePayment(acc) {
     const paidAmount = Number(acc.next_repayment_amount);
     const newOutstanding = Math.max(0, Number(acc.outstanding_amount) - paidAmount);
 
-    const { error } = await supabase
-        .from('bnpl_accounts')
-        .update({ 
-            repayment_status: 'Paid',
-            outstanding_amount: newOutstanding
-        })
-        .eq('id', id);
+    // Attempt Atomic PostgreSQL RPC first, fallback to standard update + ledger insert
+    const { error: rpcError } = await supabase.rpc('settle_bnpl_installment', {
+        p_account_id: acc.id
+    });
 
-    if (!error) {
-        acc.repayment_status = 'Paid';
-        acc.outstanding_amount = newOutstanding;
-        showToast(`Paid RM ${formatRM(paidAmount)} to ${acc.provider}!`);
-        renderAll();
+    if (rpcError) {
+        const { error: updateErr } = await supabase
+            .from('bnpl_accounts')
+            .update({
+                repayment_status: 'Paid',
+                outstanding_amount: newOutstanding
+            })
+            .eq('id', acc.id)
+            .eq('user_id', currentUser.id);
+
+        if (updateErr) {
+            showToast(`Payment error: ${updateErr.message}`);
+            return false;
+        }
+
+        await supabase.from('payment_history').insert([{
+            user_id: currentUser.id,
+            account_id: acc.id,
+            provider: acc.provider,
+            amount_paid: paidAmount
+        }]);
     }
+
+    acc.repayment_status = 'Paid';
+    acc.outstanding_amount = newOutstanding;
+    return true;
+}
+
+window.payInstallment = function(id) {
+    const acc = accountsData.find(a => String(a.id) === String(id));
+    if (!acc) return;
+
+    const paidAmount = Number(acc.next_repayment_amount);
+    requestPinAuthorization(
+        `Pay ${acc.provider}`,
+        `Confirm instant FPX payment of RM ${formatRM(paidAmount)}`,
+        async () => {
+            const ok = await executeSinglePayment(acc);
+            if (ok) {
+                showToast(`Paid RM ${formatRM(paidAmount)} to ${acc.provider}!`);
+                await loadAppData();
+            }
+        }
+    );
 };
 
-window.payAllDueInstallments = async function() {
+window.payAllDueInstallments = function() {
     const dueAccounts = accountsData.filter(a => a.is_connected && getDynamicStatus(a.repayment_status, a.repayment_date) !== 'Paid');
     if (dueAccounts.length === 0) {
         showToast('All connected accounts are already settled!');
         return;
     }
 
-    let totalSettled = 0;
-    for (const acc of dueAccounts) {
-        const paidAmt = Number(acc.next_repayment_amount);
-        const newOut = Math.max(0, Number(acc.outstanding_amount) - paidAmt);
-        const { error } = await supabase
-            .from('bnpl_accounts')
-            .update({ repayment_status: 'Paid', outstanding_amount: newOut })
-            .eq('id', acc.id);
-        if (!error) {
-            acc.repayment_status = 'Paid';
-            acc.outstanding_amount = newOut;
-            totalSettled += paidAmt;
+    const totalToSettle = dueAccounts.reduce((s, a) => s + Number(a.next_repayment_amount), 0);
+    requestPinAuthorization(
+        'Settle All Due BNPL',
+        `Authorize RM ${formatRM(totalToSettle)} across ${dueAccounts.length} providers`,
+        async () => {
+            let totalSettled = 0;
+            for (const acc of dueAccounts) {
+                const ok = await executeSinglePayment(acc);
+                if (ok) totalSettled += Number(acc.next_repayment_amount);
+            }
+            showToast(`Settled RM ${formatRM(totalSettled)} across ${dueAccounts.length} providers!`);
+            await loadAppData();
         }
-    }
-
-    showToast(`Settled RM ${formatRM(totalSettled)} across ${dueAccounts.length} providers!`);
-    renderAll();
+    );
 };
 
 // --- VIEW 3: INSIGHTS ---
@@ -440,27 +793,30 @@ function renderInsights(connected) {
     content?.classList.remove('hidden');
 
     const totalOutstanding = connected.reduce((sum, a) => sum + Number(a.outstanding_amount), 0);
-    document.getElementById('chart-total-val').textContent = displayMoney(totalOutstanding);
+    const chartTotalEl = document.getElementById('chart-total-val');
+    if (chartTotalEl) chartTotalEl.textContent = displayMoney(totalOutstanding);
 
-    listEl.innerHTML = connected.map(acc => {
-        const computedStatus = getDynamicStatus(acc.repayment_status, acc.repayment_date);
-        const isPaid = computedStatus === 'Paid';
-        return `
-            <div class="flex justify-between items-center bg-[#eef5ff] hover:bg-[#e4efff] p-4 md:p-5 rounded-2xl border border-blue-100/80 transition-all shadow-xs">
-                <div class="flex items-center gap-3.5">
-                    <div class="w-11 h-11 rounded-2xl ${acc.brand_class} flex items-center justify-center font-extrabold text-lg shadow-sm">${acc.short_code}</div>
-                    <div>
-                        <p class="font-extrabold text-slate-800 text-sm md:text-base">${acc.provider}</p>
-                        <p class="text-xs font-semibold text-slate-500">${isPaid ? 'Paid on' : 'Due'} ${formatDate(acc.repayment_date)}</p>
+    if (listEl) {
+        listEl.innerHTML = connected.map(acc => {
+            const computedStatus = getDynamicStatus(acc.repayment_status, acc.repayment_date);
+            const isPaid = computedStatus === 'Paid';
+            return `
+                <div class="flex justify-between items-center bg-[#eef5ff] hover:bg-[#e4efff] p-4 md:p-5 rounded-2xl border border-blue-100/80 transition-all shadow-xs">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-11 h-11 rounded-2xl ${acc.brand_class} flex items-center justify-center font-extrabold text-lg shadow-sm">${acc.short_code}</div>
+                        <div>
+                            <p class="font-extrabold text-slate-800 text-sm md:text-base">${acc.provider}</p>
+                            <p class="text-xs font-semibold text-slate-500">${isPaid ? 'Paid on' : 'Due'} ${formatDate(acc.repayment_date)}</p>
+                        </div>
+                    </div>
+                    <div class="text-right flex items-center gap-3">
+                        <span class="text-base md:text-lg font-black ${isPaid ? 'text-slate-400 line-through' : 'text-slate-900'}">RM ${displayMoney(acc.next_repayment_amount)}</span>
+                        ${!isPaid ? `<button onclick="payInstallment('${acc.id}')" class="px-3 py-1 rounded-full bg-[#0062eb] text-white text-[10px] font-bold hover:bg-blue-700 transition">Pay</button>` : ''}
                     </div>
                 </div>
-                <div class="text-right flex items-center gap-3">
-                    <span class="text-base md:text-lg font-black ${isPaid ? 'text-slate-400 line-through' : 'text-slate-900'}">RM ${displayMoney(acc.next_repayment_amount)}</span>
-                    ${!isPaid ? `<button onclick="payInstallment('${acc.id}')" class="px-3 py-1 rounded-full bg-[#0062eb] text-white text-[10px] font-bold hover:bg-blue-700 transition">Pay</button>` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    }
 
     updateChart(connected);
 }
@@ -536,13 +892,19 @@ function renderBudget(connected) {
     const expPct = Math.min(100, Math.round((expenses / income) * 100));
     const bnplPct = Math.min(100, Math.round((activeRepayments / income) * 100));
 
-    document.getElementById('budget-income-val').textContent = displayMoney(income);
-    document.getElementById('budget-expenses-val').textContent = displayMoney(expenses);
-    document.getElementById('budget-bnpl-val').textContent = displayMoney(activeRepayments);
-    document.getElementById('budget-remain-val').textContent = displayMoney(remaining);
+    const incEl = document.getElementById('budget-income-val');
+    const expEl = document.getElementById('budget-expenses-val');
+    const bnplEl = document.getElementById('budget-bnpl-val');
+    const remEl = document.getElementById('budget-remain-val');
+    if (incEl) incEl.textContent = displayMoney(income);
+    if (expEl) expEl.textContent = displayMoney(expenses);
+    if (bnplEl) bnplEl.textContent = displayMoney(activeRepayments);
+    if (remEl) remEl.textContent = displayMoney(remaining);
 
-    document.getElementById('budget-expenses-bar').style.width = `${expPct}%`;
-    document.getElementById('budget-bnpl-bar').style.width = `${bnplPct}%`;
+    const expBar = document.getElementById('budget-expenses-bar');
+    const bnplBar = document.getElementById('budget-bnpl-bar');
+    if (expBar) expBar.style.width = `${expPct}%`;
+    if (bnplBar) bnplBar.style.width = `${bnplPct}%`;
     
     const impactBar = document.getElementById('impact-bar');
     const impactPctEl = document.getElementById('impact-percent');
@@ -571,7 +933,7 @@ function renderBudget(connected) {
     }
 }
 
-// Editable Budget Modal Handlers (Supabase Update)
+// Editable Budget Modal Handlers (Tenant-Isolated Supabase Upsert)
 window.openBudgetModal = function() {
     document.getElementById('input-budget-income').value = budgetData.income;
     document.getElementById('input-budget-expenses').value = budgetData.expenses;
@@ -584,27 +946,48 @@ window.closeBudgetModal = function() {
 
 window.saveBudget = async function(e) {
     e.preventDefault();
+    if (!currentUser) return;
+
     const newIncome = Number(document.getElementById('input-budget-income').value);
     const newExpenses = Number(document.getElementById('input-budget-expenses').value);
 
-    const { error } = await supabase
+    const { data, error } = await supabase
         .from('user_budget')
-        .update({ income: newIncome, expenses: newExpenses })
-        .eq('id', budgetData.id || 1);
+        .upsert(
+            { user_id: currentUser.id, income: newIncome, expenses: newExpenses },
+            { onConflict: 'user_id' }
+        )
+        .select()
+        .single();
 
     if (!error) {
-        budgetData.income = newIncome;
-        budgetData.expenses = newExpenses;
+        if (data) budgetData = data;
+        else {
+            budgetData.income = newIncome;
+            budgetData.expenses = newExpenses;
+        }
         closeBudgetModal();
         showToast('Monthly budget updated in Supabase!');
         renderAll();
+    } else {
+        showToast(`Error saving budget: ${error.message}`);
     }
 };
 
-// --- VIEW 5: MORE & SUBMIT NEW DISPUTE MODAL (Supabase Insert) ---
+// --- VIEW 5: MORE & SUBMIT NEW DISPUTE MODAL (Tenant-Isolated Supabase Insert) ---
 function renderMore() {
     const listEl = document.getElementById('disputes-list');
     if (!listEl) return;
+
+    if (disputesData.length === 0) {
+        listEl.innerHTML = `
+            <div class="bg-[#eef5ff] border border-blue-100/70 p-5 rounded-2xl text-center text-xs text-slate-500 font-medium">
+                No active merchant disputes filed yet.
+            </div>
+        `;
+        return;
+    }
+
     listEl.innerHTML = disputesData.map(d => `
         <div class="flex justify-between items-center p-4 md:p-5 bg-[#eef5ff] rounded-2xl border border-blue-100/80">
             <div>
@@ -631,6 +1014,8 @@ window.closeDisputeModal = function() {
 
 window.submitDispute = async function(e) {
     e.preventDefault();
+    if (!currentUser) return;
+
     const merchant = document.getElementById('input-dispute-merchant').value.trim();
     const amount = Number(document.getElementById('input-dispute-amount').value);
     const status = document.getElementById('input-dispute-status').value;
@@ -638,7 +1023,7 @@ window.submitDispute = async function(e) {
 
     const { data, error } = await supabase
         .from('disputes')
-        .insert([{ merchant, amount, status, dispute_date: todayIso }])
+        .insert([{ user_id: currentUser.id, merchant, amount, status, dispute_date: todayIso }])
         .select()
         .single();
 
@@ -647,10 +1032,12 @@ window.submitDispute = async function(e) {
         closeDisputeModal();
         showToast(`Dispute filed for ${merchant}!`);
         renderMore();
+    } else if (error) {
+        showToast(`Failed to file dispute: ${error.message}`);
     }
 };
 
-// --- VIEW 6: CONSENT CENTRE ---
+// --- VIEW 6: CONSENT CENTRE (PIN-Protected Open Finance Connection Toggle) ---
 function renderConsentCentre() {
     const listEl = document.getElementById('consent-list');
     if (!listEl) return;
@@ -675,19 +1062,28 @@ function renderConsentCentre() {
     `).join('');
 }
 
-window.toggleAccountConnection = async function(id, currentState) {
-    const newState = !currentState;
-    const { error } = await supabase
-        .from('bnpl_accounts')
-        .update({ is_connected: newState })
-        .eq('id', id);
+window.toggleAccountConnection = function(id, currentState) {
+    const item = accountsData.find(a => String(a.id) === String(id));
+    if (!item) return;
 
-    if (!error) {
-        const item = accountsData.find(a => a.id === id);
-        if (item) item.is_connected = newState;
-        showToast(newState ? `${item.provider} connected!` : `${item.provider} disconnected!`);
-        renderAll();
-    }
+    const newState = !currentState;
+    requestPinAuthorization(
+        newState ? `Connect ${item.provider}` : `Disconnect ${item.provider}`,
+        `Enter your 4-digit PIN to ${newState ? 'grant' : 'revoke'} Open Finance API access`,
+        async () => {
+            const { error } = await supabase
+                .from('bnpl_accounts')
+                .update({ is_connected: newState })
+                .eq('id', item.id)
+                .eq('user_id', currentUser.id);
+
+            if (!error) {
+                item.is_connected = newState;
+                showToast(newState ? `${item.provider} connected!` : `${item.provider} disconnected!`);
+                renderAll();
+            }
+        }
+    );
 };
 
 window.filterShariah = function() {
@@ -722,4 +1118,46 @@ window.switchTab = function(tab) {
     });
 };
 
-document.addEventListener('DOMContentLoaded', loadAppData);
+// ============================================================================
+// 4. BOOTSTRAP AUTHENTICATION & APPLICATION LIFECYCLE
+// ============================================================================
+document.addEventListener('DOMContentLoaded', async () => {
+    injectAuthAndSecurityUI();
+
+    const authOverlay = document.getElementById('kira-auth-overlay');
+    const sessionPill = document.getElementById('kira-session-pill');
+
+    // Check active session on page load
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+        currentUser = session.user;
+        authOverlay?.classList.add('hidden');
+        sessionPill?.classList.remove('hidden');
+        await loadAppData();
+        subscribeToRealtimeSync();
+    } else {
+        authOverlay?.classList.remove('hidden');
+        sessionPill?.classList.add('hidden');
+    }
+
+    // Listen for live login / logout / token refresh events
+    supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        if (newSession?.user) {
+            const isNewUserLogin = !currentUser || currentUser.id !== newSession.user.id;
+            currentUser = newSession.user;
+            authOverlay?.classList.add('hidden');
+            sessionPill?.classList.remove('hidden');
+            if (isNewUserLogin) {
+                await loadAppData();
+                subscribeToRealtimeSync();
+            }
+        } else {
+            currentUser = null;
+            currentProfile = null;
+            accountsData = [];
+            disputesData = [];
+            authOverlay?.classList.remove('hidden');
+            sessionPill?.classList.add('hidden');
+        }
+    });
+});

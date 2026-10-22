@@ -75,6 +75,61 @@
 
 <body class="h-screen w-full overflow-hidden text-slate-800 bg-[#ecf3ff] relative font-sans antialiased selection:bg-blue-100 selection:text-blue-900">
 
+    <!-- ADD THIS RIGHT INSIDE THE OPENING <body> TAG OF index.html -->
+<div id="auth-overlay" class="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="auth-logo-badge">K</div>
+        <h2>Kira Wallet</h2>
+        <p>Smart BNPL & Shariah Installment Tracker</p>
+      </div>
+  
+      <!-- Auth Mode Switcher -->
+      <div class="auth-tabs">
+        <button type="button" id="tab-login" class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+        <button type="button" id="tab-signup" class="auth-tab" onclick="switchAuthTab('signup')">Create Account</button>
+      </div>
+  
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+        <div id="signup-name-group" class="auth-input-group" style="display: none;">
+          <label>Full Name</label>
+          <input type="text" id="auth-name" placeholder="e.g. Ahmad / Alex" />
+        </div>
+  
+        <div class="auth-input-group">
+          <label>Email Address</label>
+          <input type="email" id="auth-email" placeholder="you@example.com" required />
+        </div>
+  
+        <div class="auth-input-group">
+          <label>Password</label>
+          <input type="password" id="auth-password" placeholder="••••••••" minlength="6" required />
+        </div>
+  
+        <div id="signup-pin-group" class="auth-input-group" style="display: none;">
+          <label>Set 4-Digit Security PIN (For Admin & Pay Lock)</label>
+          <input type="password" id="auth-pin" placeholder="1234" maxlength="4" pattern="\d{4}" />
+        </div>
+  
+        <div id="auth-error-msg" class="auth-error-msg"></div>
+  
+        <button type="submit" id="auth-submit-btn" class="auth-submit-btn">
+          Sign In to Wallet
+        </button>
+      </form>
+  
+      <div class="auth-footer-links">
+        <button type="button" class="auth-link-btn" onclick="handlePasswordReset()">Forgot Password?</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- OPTIONAL: Add this user pill inside your existing app header in index.html -->
+  <div class="user-session-bar" id="user-session-bar" style="display: none;">
+    <span id="active-user-label">Wallet Active</span>
+    <button type="button" onclick="handleLogout()" class="logout-pill-btn">Sign Out</button>
+  </div>
+  
     <div id="app-wrapper" class="flex flex-col md:flex-row w-full h-full relative">
         
         <!-- Toast Notification -->
