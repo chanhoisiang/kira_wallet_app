@@ -17,7 +17,6 @@ let currentUser = null;
 let currentProfile = null;
 let authMode = 'login'; // 'login' | 'signup'
 let realtimeChannel = null;
-let pendingPinCallback = null;
 let isFetchingData = false;
 
 // Interactive UI State
@@ -70,7 +69,7 @@ function getDynamicStatus(status, dateStr) {
 }
 
 // ============================================================================
-// AUTHENTICATION, PIN MODAL & SESSION UI (Cleaned Wording & Zero Duplicates)
+// AUTHENTICATION & SESSION UI (PIN-Free)
 // ============================================================================
 function injectAuthAndSecurityUI() {
     document.getElementById('auth-overlay')?.remove();
@@ -84,7 +83,6 @@ function injectAuthAndSecurityUI() {
         <div id="kira-auth-overlay" class="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4 transition-all">
             <div class="w-full max-w-md bg-white rounded-3xl p-6 md:p-8 shadow-2xl border border-blue-100">
                 <div class="text-center mb-6">
-                    <!-- LOGO WITH FALLBACK TO STYLIZED 'K' IF LOGO.PNG IS MISSING -->
                     <div class="w-16 h-16 mx-auto mb-3 rounded-2xl overflow-hidden shadow-xl shadow-blue-500/20 bg-[#0062eb] flex items-center justify-center text-white font-black text-2xl">
                         <img src="logo.png" alt="Kira Wallet" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerHTML='K';" />
                     </div>
@@ -118,11 +116,6 @@ function injectAuthAndSecurityUI() {
                         <input type="password" id="kira-input-password" placeholder="At least 6 characters" minlength="6" required class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-semibold outline-none transition" />
                     </div>
 
-                    <div id="kira-pin-wrap" class="hidden">
-                        <label class="block text-xs font-bold text-slate-700 mb-1">4-Digit Wallet PIN <span class="text-slate-400 font-medium">(Used to approve payments)</span></label>
-                        <input type="password" id="kira-input-pin" placeholder="e.g. 1234" maxlength="4" pattern="\\d{4}" inputmode="numeric" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#0062eb] text-sm font-black tracking-widest text-center outline-none transition" />
-                    </div>
-
                     <p id="kira-auth-msg" class="text-xs font-bold text-center min-h-[18px] text-red-600"></p>
 
                     <button type="submit" id="kira-submit-btn" class="w-full py-3.5 rounded-2xl bg-[#0062eb] hover:bg-blue-700 text-white font-extrabold text-sm shadow-lg shadow-blue-500/25 transition active:scale-[0.99] cursor-pointer">
@@ -138,31 +131,7 @@ function injectAuthAndSecurityUI() {
             </div>
         </div>
 
-        <!-- 2. 4-DIGIT SECURITY PIN VERIFICATION MODAL -->
-        <div id="kira-pin-modal" class="hidden fixed inset-0 z-[9998] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <div class="w-full max-w-xs bg-white rounded-3xl p-6 shadow-2xl border border-blue-100 text-center">
-                <div class="w-12 h-12 mx-auto mb-3 rounded-2xl bg-[#eef5ff] text-[#0062eb] flex items-center justify-center font-black text-xl">
-                    🔒
-                </div>
-                <h3 class="text-base font-black text-slate-900" id="pin-modal-title">Approve Transaction</h3>
-                <p class="text-xs text-slate-500 font-medium mt-1 mb-4" id="pin-modal-desc">Enter your 4-digit Wallet PIN</p>
-                
-                <form onsubmit="confirmPinModal(event)" class="space-y-3">
-                    <input type="password" id="pin-modal-input" maxlength="4" inputmode="numeric" placeholder="••••" required class="w-full py-3 rounded-xl border-2 border-blue-200 focus:border-[#0062eb] text-center text-xl font-black tracking-[0.5em] outline-none" />
-                    <p id="pin-modal-error" class="text-[11px] font-bold text-red-600 min-h-[16px]"></p>
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-                        <button type="button" onclick="closePinModal()" class="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition">
-                            Cancel
-                        </button>
-                        <button type="submit" class="py-2.5 rounded-xl bg-[#0062eb] hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition">
-                            Confirm
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- 3. FLOATING USER SESSION & SIGN-OUT PILL (Top-Right) -->
+        <!-- 2. FLOATING USER SESSION & SIGN-OUT PILL (Top-Right) -->
         <div id="kira-session-pill" class="hidden fixed top-3 right-3 z-50 flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-md border border-blue-100">
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
             <span id="kira-user-display" class="text-[11px] font-extrabold text-slate-700 max-w-[140px] truncate">Wallet Active</span>
@@ -190,7 +159,6 @@ window.switchAuthMode = function(mode) {
     }
 
     document.getElementById('kira-name-wrap')?.classList.toggle('hidden', !isSignup);
-    document.getElementById('kira-pin-wrap')?.classList.toggle('hidden', !isSignup);
     document.getElementById('kira-forgot-wrap')?.classList.toggle('hidden', isSignup);
 
     const subtitleEl = document.getElementById('kira-auth-subtitle');
@@ -209,7 +177,6 @@ window.switchAuthMode = function(mode) {
     if (msgEl) msgEl.textContent = '';
 };
 
-// Backwards-compatible alias in case index.html still calls switchAuthTab
 window.switchAuthTab = window.switchAuthMode;
 
 window.handleAuthSubmit = async function(e) {
@@ -217,7 +184,6 @@ window.handleAuthSubmit = async function(e) {
     const email = document.getElementById('kira-input-email')?.value.trim();
     const password = document.getElementById('kira-input-password')?.value;
     const fullName = document.getElementById('kira-input-name')?.value.trim() || email.split('@')[0];
-    const adminPin = document.getElementById('kira-input-pin')?.value.trim() || '1234';
     const msgEl = document.getElementById('kira-auth-msg');
     const btnEl = document.getElementById('kira-submit-btn');
 
@@ -238,12 +204,11 @@ window.handleAuthSubmit = async function(e) {
                 email,
                 password,
                 options: {
-                    data: { full_name: fullName, admin_pin: adminPin }
+                    data: { full_name: fullName }
                 }
             });
             if (error) throw error;
 
-            // If email confirmation is OFF, session is returned immediately
             if (data?.session?.user) {
                 currentUser = data.session.user;
                 document.getElementById('kira-auth-overlay')?.classList.add('hidden');
@@ -252,7 +217,6 @@ window.handleAuthSubmit = async function(e) {
                 await loadAppData();
                 subscribeToRealtimeSync();
             } else if (data?.user) {
-                // Attempt automatic sign-in right away
                 const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
                 if (!signInErr && signInData?.session?.user) {
                     currentUser = signInData.session.user;
@@ -264,7 +228,7 @@ window.handleAuthSubmit = async function(e) {
                 } else {
                     if (msgEl) {
                         msgEl.className = 'text-xs font-bold text-center min-h-[18px] text-emerald-600';
-                        msgEl.textContent = 'Account created! Please disable "Confirm email" in Supabase or check your inbox.';
+                        msgEl.textContent = 'Account created successfully! Please sign in.';
                     }
                     switchAuthMode('login');
                 }
@@ -330,58 +294,15 @@ window.handleSignOut = async function() {
 };
 window.handleLogout = window.handleSignOut;
 
-// Prompt for 4-Digit Security PIN before sensitive actions
-function requestPinAuthorization(title, description, onVerifiedCallback) {
-    pendingPinCallback = onVerifiedCallback;
-    const modal = document.getElementById('kira-pin-modal');
-    const titleEl = document.getElementById('pin-modal-title');
-    const descEl = document.getElementById('pin-modal-desc');
-    const inputEl = document.getElementById('pin-modal-input');
-    const errEl = document.getElementById('pin-modal-error');
-
-    if (titleEl) titleEl.textContent = title || 'Approve Transaction';
-    if (descEl) descEl.textContent = description || 'Enter your 4-digit Wallet PIN';
-    if (errEl) errEl.textContent = '';
-    if (inputEl) {
-        inputEl.value = '';
-        setTimeout(() => inputEl.focus(), 50);
-    }
-    modal?.classList.remove('hidden');
-}
-
-window.closePinModal = function() {
-    pendingPinCallback = null;
-    document.getElementById('kira-pin-modal')?.classList.add('hidden');
-};
-
-window.confirmPinModal = async function(e) {
-    e.preventDefault();
-    const enteredPin = document.getElementById('pin-modal-input')?.value.trim();
-    const errEl = document.getElementById('pin-modal-error');
-    const expectedPin = currentProfile?.admin_pin || currentUser?.user_metadata?.admin_pin || '1234';
-
-    if (enteredPin !== expectedPin) {
-        if (errEl) errEl.textContent = 'Incorrect Wallet PIN. Please try again.';
-        return;
-    }
-
-    const cb = pendingPinCallback;
-    closePinModal();
-    if (typeof cb === 'function') {
-        await cb();
-    }
-};
 
 // ============================================================================
-// 2. FAULT-TOLERANT USER PROVISIONING & DATA LOADER
+// 2. USER PROVISIONING & DATA LOADER
 // ============================================================================
 async function ensureStarterDataForUser() {
     if (!currentUser) return;
 
     const metaName = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User';
-    const metaPin = currentUser.user_metadata?.admin_pin || '1234';
 
-    // 1. Ensure user_profiles row exists
     const { data: existingProf } = await supabase
         .from('user_profiles')
         .select('*')
@@ -392,12 +313,10 @@ async function ensureStarterDataForUser() {
         await supabase.from('user_profiles').insert([{
             id: currentUser.id,
             full_name: metaName,
-            email: currentUser.email,
-            admin_pin: metaPin
+            email: currentUser.email
         }]);
     }
 
-    // 2. Ensure starter BNPL accounts exist for this user
     const { data: existingAccs } = await supabase
         .from('bnpl_accounts')
         .select('id')
@@ -413,15 +332,14 @@ async function ensureStarterDataForUser() {
         };
 
         await supabase.from('bnpl_accounts').insert([
-            { user_id: currentUser.id, provider: 'SPayLater', short_code: 'S', brand_class: 'bg-[#ee4d2d] text-white', outstanding_amount: 450, next_repayment_amount: 150, repayment_date: addDays(5), repayment_status: 'Upcoming', is_shariah: true, is_connected: true },
-            { user_id: currentUser.id, provider: 'Atome', short_code: 'A', brand_class: 'bg-[#facc15] text-slate-900', outstanding_amount: 360, next_repayment_amount: 120, repayment_date: addDays(12), repayment_status: 'Upcoming', is_shariah: true, is_connected: true },
-            { user_id: currentUser.id, provider: 'Grab PayLater', short_code: 'G', brand_class: 'bg-[#00b14f] text-white', outstanding_amount: 200, next_repayment_amount: 200, repayment_date: addDays(-2), repayment_status: 'Unpaid', is_shariah: true, is_connected: true },
+            { user_id: currentUser.id, provider: 'SPayLater', short_code: 'S', brand_class: 'bg-[#ee4d2d] text-white', outstanding_amount: 450, next_repayment_amount: 150, repayment_date: addDays(5), repayment_status: 'Upcoming', is_shariah: true, is_connected: false },
+            { user_id: currentUser.id, provider: 'Atome', short_code: 'A', brand_class: 'bg-[#facc15] text-slate-900', outstanding_amount: 360, next_repayment_amount: 120, repayment_date: addDays(12), repayment_status: 'Upcoming', is_shariah: true, is_connected: false },
+            { user_id: currentUser.id, provider: 'Grab PayLater', short_code: 'G', brand_class: 'bg-[#00b14f] text-white', outstanding_amount: 200, next_repayment_amount: 200, repayment_date: addDays(-2), repayment_status: 'Unpaid', is_shariah: true, is_connected: false },
             { user_id: currentUser.id, provider: "Touch 'n Go PayLater", short_code: 'T', brand_class: 'bg-[#0062eb] text-white', outstanding_amount: 0, next_repayment_amount: 0, repayment_date: addDays(18), repayment_status: 'Paid', is_shariah: true, is_connected: false },
             { user_id: currentUser.id, provider: 'hoolah', short_code: 'H', brand_class: 'bg-[#ff3366] text-white', outstanding_amount: 180, next_repayment_amount: 60, repayment_date: addDays(20), repayment_status: 'Upcoming', is_shariah: false, is_connected: false }
         ]);
     }
 
-    // 3. Ensure user_budget row exists
     const { data: existingBudget } = await supabase
         .from('user_budget')
         .select('id')
@@ -450,8 +368,7 @@ async function loadAppData() {
         ]);
 
         currentProfile = profRes.data || {
-            full_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0],
-            admin_pin: currentUser.user_metadata?.admin_pin || '1234'
+            full_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0]
         };
 
         const userLabel = document.getElementById('kira-user-display');
@@ -482,8 +399,9 @@ function subscribeToRealtimeSync() {
         .subscribe();
 }
 
+
 // ============================================================================
-// 3. RENDER ALL VIEWS (100% Preserved UI & Logic)
+// 3. RENDER ALL VIEWS
 // ============================================================================
 function renderAll() {
     const shariahOnly = document.getElementById('toggleShariah')?.checked || false;
@@ -676,7 +594,7 @@ function renderCalendar(connected) {
                             RM ${displayMoney(acc.next_repayment_amount)}
                         </p>
                         ${!isPaid ? `
-                            <button onclick="payInstallment('${acc.id}')" class="px-3.5 py-1 rounded-full bg-[#0062eb] hover:bg-blue-700 text-white text-[10px] font-bold shadow-xs transition active:scale-95">
+                            <button onclick="payInstallment('${acc.id}')" class="px-3.5 py-1 rounded-full bg-[#0062eb] hover:bg-blue-700 text-white text-[10px] font-bold shadow-xs transition active:scale-95 cursor-pointer">
                                 Pay Now
                             </button>
                         ` : `<span class="text-[10px] font-bold text-emerald-600">Settled ✓</span>`}
@@ -780,12 +698,11 @@ function renderCalendarGrid(connected) {
     gridEl.innerHTML = cellsHTML;
 }
 
-// --- SUPABASE: PIN-PROTECTED 1-TAP PAY NOW & PAY ALL DUE ---
+// --- INSTANT 1-TAP PAYMENTS (PIN-Free) ---
 async function executeSinglePayment(acc) {
     const paidAmount = Number(acc.next_repayment_amount);
     const newOutstanding = Math.max(0, Number(acc.outstanding_amount) - paidAmount);
 
-    // Pass raw UUID string (acc.id) to RPC
     const { error: rpcError } = await supabase.rpc('settle_bnpl_installment', {
         p_account_id: acc.id
     });
@@ -818,45 +735,32 @@ async function executeSinglePayment(acc) {
     return true;
 }
 
-window.payInstallment = function(id) {
+window.payInstallment = async function(id) {
     const acc = accountsData.find(a => String(a.id) === String(id));
     if (!acc) return;
 
     const paidAmount = Number(acc.next_repayment_amount);
-    requestPinAuthorization(
-        `Pay ${acc.provider}`,
-        `Approve instant payment of RM ${formatRM(paidAmount)}`,
-        async () => {
-            const ok = await executeSinglePayment(acc);
-            if (ok) {
-                showToast(`Paid RM ${formatRM(paidAmount)} to ${acc.provider}!`);
-                renderAll();
-            }
-        }
-    );
+    const ok = await executeSinglePayment(acc);
+    if (ok) {
+        showToast(`Paid RM ${formatRM(paidAmount)} to ${acc.provider}!`);
+        renderAll();
+    }
 };
 
-window.payAllDueInstallments = function() {
+window.payAllDueInstallments = async function() {
     const dueAccounts = accountsData.filter(a => a.is_connected && getDynamicStatus(a.repayment_status, a.repayment_date) !== 'Paid');
     if (dueAccounts.length === 0) {
         showToast('All connected accounts are already settled!');
         return;
     }
 
-    const totalToSettle = dueAccounts.reduce((s, a) => s + Number(a.next_repayment_amount), 0);
-    requestPinAuthorization(
-        'Settle All Due Installments',
-        `Approve RM ${formatRM(totalToSettle)} across ${dueAccounts.length} providers`,
-        async () => {
-            let totalSettled = 0;
-            for (const acc of dueAccounts) {
-                const ok = await executeSinglePayment(acc);
-                if (ok) totalSettled += Number(acc.next_repayment_amount);
-            }
-            showToast(`Settled RM ${formatRM(totalSettled)} across ${dueAccounts.length} providers!`);
-            renderAll();
-        }
-    );
+    let totalSettled = 0;
+    for (const acc of dueAccounts) {
+        const ok = await executeSinglePayment(acc);
+        if (ok) totalSettled += Number(acc.next_repayment_amount);
+    }
+    showToast(`Settled RM ${formatRM(totalSettled)} across ${dueAccounts.length} providers!`);
+    renderAll();
 };
 
 // --- VIEW 3: INSIGHTS ---
@@ -893,7 +797,7 @@ function renderInsights(connected) {
                     </div>
                     <div class="text-right flex items-center gap-3">
                         <span class="text-base md:text-lg font-black ${isPaid ? 'text-slate-400 line-through' : 'text-slate-900'}">RM ${displayMoney(acc.next_repayment_amount)}</span>
-                        ${!isPaid ? `<button onclick="payInstallment('${acc.id}')" class="px-3 py-1 rounded-full bg-[#0062eb] text-white text-[10px] font-bold hover:bg-blue-700 transition">Pay</button>` : ''}
+                        ${!isPaid ? `<button onclick="payInstallment('${acc.id}')" class="px-3 py-1 rounded-full bg-[#0062eb] text-white text-[10px] font-bold hover:bg-blue-700 transition cursor-pointer">Pay</button>` : ''}
                     </div>
                 </div>
             `;
@@ -926,7 +830,7 @@ function updateChart(connected) {
     });
 }
 
-// --- VIEW 4: BUDGET & PRE-PURCHASE SIMULATOR ---
+// --- VIEW 4: BUDGET & SIMULATOR ---
 window.setSimTenure = function(months) {
     simTenure = months;
     [3, 6, 12].forEach(m => {
@@ -1053,7 +957,7 @@ window.saveBudget = async function(e) {
     }
 };
 
-// --- VIEW 5: MORE & SUBMIT NEW DISPUTE MODAL ---
+// --- VIEW 5: DISPUTES ---
 function renderMore() {
     const listEl = document.getElementById('disputes-list');
     if (!listEl) return;
@@ -1116,7 +1020,7 @@ window.submitDispute = async function(e) {
     }
 };
 
-// --- VIEW 6: CONSENT CENTRE ---
+// --- VIEW 6: CONSENT CENTRE (Instant Connection Toggle) ---
 function renderConsentCentre() {
     const listEl = document.getElementById('consent-list');
     if (!listEl) return;
@@ -1130,7 +1034,7 @@ function renderConsentCentre() {
                 </div>
             </div>
             <button onclick="toggleAccountConnection('${acc.id}', ${acc.is_connected})" 
-                class="px-5 py-2 rounded-full text-xs font-bold transition-all active:scale-95 shadow-xs ${
+                class="px-5 py-2 rounded-full text-xs font-bold transition-all active:scale-95 shadow-xs cursor-pointer ${
                     acc.is_connected 
                     ? 'bg-emerald-500 text-white hover:bg-red-500' 
                     : 'bg-[#0062eb] text-white hover:bg-blue-700'
@@ -1141,53 +1045,46 @@ function renderConsentCentre() {
     `).join('');
 }
 
-window.toggleAccountConnection = function(id, currentState) {
+window.toggleAccountConnection = async function(id, currentState) {
     const item = accountsData.find(a => String(a.id) === String(id));
     if (!item) return;
 
     const newState = !currentState;
-    requestPinAuthorization(
-        newState ? `Connect ${item.provider}` : `Disconnect ${item.provider}`,
-        `Enter your 4-digit PIN to ${newState ? 'fetch bills via Open Finance API' : 'revoke access'}`,
-        async () => {
-            // Restore demo balances when connecting, zero them out when disconnecting
-            const restoredAmounts = {
-                'SPayLater': { out: 450.00, next: 150.00 },
-                'Atome': { out: 360.00, next: 120.00 },
-                'Grab PayLater': { out: 200.00, next: 200.00 },
-                "Touch 'n Go PayLater": { out: 120.00, next: 40.00 },
-                'hoolah': { out: 180.00, next: 60.00 }
-            };
+    const restoredAmounts = {
+        'SPayLater': { out: 450.00, next: 150.00 },
+        'Atome': { out: 360.00, next: 120.00 },
+        'Grab PayLater': { out: 200.00, next: 200.00 },
+        "Touch 'n Go PayLater": { out: 120.00, next: 40.00 },
+        'hoolah': { out: 180.00, next: 60.00 }
+    };
 
-            const defaults = restoredAmounts[item.provider] || { out: 250.00, next: 80.00 };
-            const newOutstanding = newState ? defaults.out : 0.00;
-            const newNextRepayment = newState ? defaults.next : 0.00;
-            const newStatus = newState ? 'Upcoming' : 'Paid';
+    const defaults = restoredAmounts[item.provider] || { out: 250.00, next: 80.00 };
+    const newOutstanding = newState ? defaults.out : 0.00;
+    const newNextRepayment = newState ? defaults.next : 0.00;
+    const newStatus = newState ? 'Upcoming' : 'Paid';
 
-            const { error } = await supabase
-                .from('bnpl_accounts')
-                .update({ 
-                    is_connected: newState,
-                    outstanding_amount: newOutstanding,
-                    next_repayment_amount: newNextRepayment,
-                    repayment_status: newStatus
-                })
-                .eq('id', item.id)
-                .eq('user_id', currentUser.id);
+    const { error } = await supabase
+        .from('bnpl_accounts')
+        .update({ 
+            is_connected: newState,
+            outstanding_amount: newOutstanding,
+            next_repayment_amount: newNextRepayment,
+            repayment_status: newStatus
+        })
+        .eq('id', item.id)
+        .eq('user_id', currentUser.id);
 
-            if (!error) {
-                item.is_connected = newState;
-                item.outstanding_amount = newOutstanding;
-                item.next_repayment_amount = newNextRepayment;
-                item.repayment_status = newStatus;
+    if (!error) {
+        item.is_connected = newState;
+        item.outstanding_amount = newOutstanding;
+        item.next_repayment_amount = newNextRepayment;
+        item.repayment_status = newStatus;
 
-                showToast(newState ? `Successfully synced bills from ${item.provider}!` : `Disconnected ${item.provider}.`);
-                renderAll();
-            } else {
-                showToast(`Connection error: ${error.message}`);
-            }
-        }
-    );
+        showToast(newState ? `Successfully synced bills from ${item.provider}!` : `Disconnected ${item.provider}.`);
+        renderAll();
+    } else {
+        showToast(`Connection error: ${error.message}`);
+    }
 };
 
 window.filterShariah = function() {
@@ -1222,8 +1119,9 @@ window.switchTab = function(tab) {
     });
 };
 
+
 // ============================================================================
-// 4. BOOTSTRAP AUTHENTICATION (Non-Blocking Supabase v2 Pattern)
+// 4. BOOTSTRAP LIFECYCLE
 // ============================================================================
 document.addEventListener('DOMContentLoaded', async () => {
     injectAuthAndSecurityUI();
@@ -1231,7 +1129,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const authOverlay = document.getElementById('kira-auth-overlay');
     const sessionPill = document.getElementById('kira-session-pill');
 
-    // Check active session on page load
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
         currentUser = session.user;
@@ -1244,7 +1141,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         sessionPill?.classList.add('hidden');
     }
 
-    // IMPORTANT: Defer async Supabase queries with setTimeout(..., 0) to prevent Supabase v2 lock deadlocks
     supabase.auth.onAuthStateChange((_event, newSession) => {
         if (newSession?.user) {
             const isNewUserLogin = !currentUser || currentUser.id !== newSession.user.id;
