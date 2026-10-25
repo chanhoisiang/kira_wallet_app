@@ -1,0 +1,25 @@
+===================================================================
+KIRA WALLET - PROJECT ARCHITECTURE & DEVELOPMENT PLAN
+===================================================================
+
+1. PROJECT OVERVIEW
+Kira Wallet is a mobile-first fintech web application inspired by the TNG eWallet UI. It is designed to help users track Buy Now, Pay Later (BNPL) installments, manage monthly budgets, simulate purchase affordability, and view comprehensive membership records.
+
+2. SYSTEM ARCHITECTURE
+- Frontend: HTML5, JavaScript/TypeScript, Vite, Tailwind CSS (Mobile-first responsive layout).
+- Backend / Database: Supabase (PostgreSQL, Row-Level Security, RESTful API client integration).
+- Hosting & CI/CD: Vercel connected via GitHub for automated production builds.
+
+3. CORE MODULES IMPLEMENTED
+- Interactive Dashboard: Real-time summary of wallet balance, active BNPL commitments, and budget health.
+- BNPL Tracker & Repayment Calendar: Tracks upcoming installment due dates and processes interactive repayments.
+- Affordability Simulator: Calculates impact of new BNPL commitments against current monthly budget limits.
+- Membership Directory: Comprehensive membership list displaying member profiles and status records (replacing legacy claim modules).
+- Streamlined Access: Direct dashboard access (4-digit PIN lock removed for frictionless prototype testing).
+
+4. DEVELOPMENT MILESTONES
+- Phase 1: Requirement Analysis & UI/UX Prototyping (TNG eWallet aesthetic).
+- Phase 2: Database Schema Design & Supabase Multi-tenant Setup.
+- Phase 3: Frontend Module Development (Dashboard, BNPL Calendar, Affordability Simulator).
+- Phase 4: System Refinement (Removal of PIN lock & Claim page; integration of Membership List).
+- Phase 5: Testing, Vercel Deployment & Documentation.
