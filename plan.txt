@@ -3,23 +3,23 @@ KIRA WALLET - PROJECT ARCHITECTURE & DEVELOPMENT PLAN
 ===================================================================
 
 1. PROJECT OVERVIEW
-Kira Wallet is a mobile-first fintech web application inspired by the TNG eWallet UI. It is designed to help users track Buy Now, Pay Later (BNPL) installments, manage monthly budgets, simulate purchase affordability, and view comprehensive membership records.
+Kira Wallet is a mobile-first, non-lending Buy Now, Pay Later (BNPL) aggregator and budgeting web application. It is designed to help users consolidate BNPL installment schedules across multiple providers, manage monthly budgets, simulate pre-purchase affordability, and track refund/dispute records. All balances and accounts use demonstration data; clicking "Pay Now" only records a settlement in the database, and no real money moves.
 
 2. SYSTEM ARCHITECTURE
-- Frontend: HTML5, JavaScript/TypeScript, Vite, Tailwind CSS (Mobile-first responsive layout).
-- Backend / Database: Supabase (PostgreSQL, Row-Level Security, RESTful API client integration).
-- Hosting & CI/CD: Vercel connected via GitHub for automated production builds.
+- Frontend (frontend/): HTML5, Vanilla JavaScript (ES6+), Vite, Tailwind CSS (CDN), and Chart.js v4 (CDN) in a responsive layout.
+- Backend / Database (backend/schema.sql): Supabase (PostgreSQL, Supabase Auth, Row-Level Security across all 5 tables, and RPC stored procedures).
+- Hosting & CI/CD: Vercel connected via GitHub (with Root Directory set to frontend/).
 
 3. CORE MODULES IMPLEMENTED
-- Interactive Dashboard: Real-time summary of wallet balance, active BNPL commitments, and budget health.
-- BNPL Tracker & Repayment Calendar: Tracks upcoming installment due dates and processes interactive repayments.
-- Affordability Simulator: Calculates impact of new BNPL commitments against current monthly budget limits.
-- Membership Directory: Comprehensive membership list displaying member profiles and status records (replacing legacy claim modules).
-- Streamlined Access: Direct dashboard access (4-digit PIN lock removed for frictionless prototype testing).
+- Unified BNPL Dashboard: Real-time summary of total outstanding BNPL commitments, connected BNPL accounts, Shariah-compliant filtering, and overdue alerts.
+- BNPL Tracker & Repayment Calendar: Tracks upcoming and overdue installment due dates and records simulated settlements ("Pay Now" / "Settle All Unpaid") without moving real funds.
+- Spending Insights: Interactive Chart.js doughnut breakdown of BNPL exposure by provider and settlement status.
+- Smart Budget & Pre-Purchase DSR Simulator: Calculates monthly budget utilization and stress-tests the affordability impact of new BNPL purchases across 3-, 6-, and 12-month tenures.
+- Services & Protection (Dispute Tracker & Consent Centre): Tracks disputed merchant orders and manages Open Finance provider connection permissions.
 
 4. DEVELOPMENT MILESTONES
-- Phase 1: Requirement Analysis & UI/UX Prototyping (TNG eWallet aesthetic).
-- Phase 2: Database Schema Design & Supabase Multi-tenant Setup.
-- Phase 3: Frontend Module Development (Dashboard, BNPL Calendar, Affordability Simulator).
-- Phase 4: System Refinement (Removal of PIN lock & Claim page; integration of Membership List).
-- Phase 5: Testing, Vercel Deployment & Documentation.
+- Phase 1: Requirement Analysis & Open Finance UI/UX Prototyping.
+- Phase 2: Database Schema Design, Supabase Auth & Row-Level Security (RLS) Setup across 5 tables.
+- Phase 3: Frontend Module Development (Dashboard, Repayment Calendar, Insights, Budget Simulator).
+- Phase 4: Dispute Tracker, Open Finance Consent Centre & Demonstration Data Seeding (RM 5,000 budget + 5 BNPL accounts).
+- Phase 5: Build Verification (cd frontend && npm install && npm run build), Vercel Deployment & Documentation.

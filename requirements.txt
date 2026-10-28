@@ -1,0 +1,19 @@
+# ==========================================
+# Kira Wallet — System & Build Requirements
+# ==========================================
+
+# 1. Runtime & Build Environment
+Node.js >= 18.0.0
+Vite (Frontend Build Tool & Dev Server)
+
+# 2. Frontend Libraries & CDN Dependencies
+@supabase/supabase-js (v2.39.8)
+Tailwind CSS (via CDN: https://cdn.tailwindcss.com)
+Chart.js (v4 via jsDelivr CDN)
+
+# 3. Backend & Cloud Services
+Supabase (PostgreSQL Database, Auth, Row-Level Security across 5 tables)
+Vercel (Static Web Hosting)
+
+# 4. Development Environment
+Visual Studio Code (VS Code)

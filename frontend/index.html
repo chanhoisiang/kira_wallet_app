@@ -21,26 +21,25 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kira Wallet</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <link rel="stylesheet" href="/src/style.css">
     <style>
         :root {
-            --tng-blue: #0062eb;
-            --tng-dark-blue: #0047b3;
-            --tng-light-blue: #eef5ff;
+            --kira-blue: #0062eb;
+            --kira-dark-blue: #0047b3;
+            --kira-light-blue: #eef5ff;
         }
 
-        .bg-tng {
+        .bg-kira {
             background: linear-gradient(135deg, #0062eb 0%, #004bc7 100%);
         }
 
-        .text-tng {
+        .text-kira {
             color: #0062eb;
         }
 
-        .border-tng {
+        .border-kira {
             border-color: #0062eb;
         }
 
@@ -59,7 +58,7 @@
             color: #ffffff;
         }
 
-        .brand-tng {
+        .brand-kira {
             background-color: #015abf;
             color: #ffffff;
         }
@@ -80,8 +79,8 @@
             background-size: 100% 100%, 100% 100%, 100% 100%, 22px 22px;
         }
 
-        /* Signature TNG Top Curved Header Wave */
-        .tng-top-wave {
+        /* Signature Kira Top Curved Header Wave */
+        .kira-top-wave {
             position: absolute;
             top: 0;
             left: 0;
@@ -96,7 +95,7 @@
             pointer-events: none;
         }
 
-        .tng-top-wave::before {
+        .kira-top-wave::before {
             content: '';
             position: absolute;
             top: -70px;
@@ -107,7 +106,7 @@
             border: 32px solid rgba(255, 255, 255, 0.07);
         }
 
-        .tng-top-wave::after {
+        .kira-top-wave::after {
             content: '';
             position: absolute;
             bottom: -90px;
@@ -122,6 +121,11 @@
 
 <body
     class="h-screen w-full overflow-hidden text-slate-800 bg-[#ecf3ff] relative font-sans antialiased selection:bg-blue-100 selection:text-blue-900">
+    <!-- Demonstration Data Notice (Matches Report Sections E & F) -->
+    <div
+        class="w-full bg-amber-50 border-b border-amber-300 px-4 py-1.5 text-center text-xs font-semibold text-amber-800 shrink-0 z-50">
+        Demonstration data. No real money moves.
+    </div>
 
     <!-- ADD THIS RIGHT INSIDE THE OPENING <body> TAG OF index.html -->
     <div id="auth-overlay" class="auth-overlay">
@@ -130,6 +134,11 @@
                 <img src="logo.png" alt="Kira Wallet Logo" class="w-10 h-10 rounded-2xl object-cover shadow-md" />
                 <h2>Kira Wallet</h2>
                 <p>Smart BNPL & Shariah Installment Tracker</p>
+            </div>
+
+            <!-- Demonstration Data Banner on Login Screen -->
+            <div class="w-full mb-4 rounded-xl bg-amber-50 border border-amber-300 px-3 py-2 text-center text-xs font-semibold text-amber-800">
+                Demonstration data. No real money moves.
             </div>
 
             <!-- Auth Mode Switcher -->
@@ -211,7 +220,7 @@
                         <button type="button" onclick="closeBudgetModal()"
                             class="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">Cancel</button>
                         <button type="submit"
-                            class="flex-1 py-3 rounded-xl bg-tng hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition">Save
+                            class="flex-1 py-3 rounded-xl bg-kira hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition">Save
                             to Cloud</button>
                     </div>
                 </form>
@@ -254,7 +263,7 @@
                         <button type="button" onclick="closeDisputeModal()"
                             class="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition">Cancel</button>
                         <button type="submit"
-                            class="flex-1 py-3 rounded-xl bg-tng hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition">Submit
+                            class="flex-1 py-3 rounded-xl bg-kira hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/20 transition">Submit
                             Claim</button>
                     </div>
                 </form>
@@ -266,7 +275,7 @@
             class="hidden md:flex flex-col w-64 bg-white border-r border-slate-200/80 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-30 shrink-0 h-full">
             <div class="p-6 flex items-center gap-3 border-b border-slate-100">
                 <div
-                    class="w-10 h-10 rounded-2xl bg-tng text-white font-extrabold flex items-center justify-center text-xl shadow-md shadow-blue-500/25 tracking-tight">
+                    class="w-10 h-10 rounded-2xl bg-kira text-white font-extrabold flex items-center justify-center text-xl shadow-md shadow-blue-500/25 tracking-tight">
                     K</div>
                 <div>
                     <span class="font-extrabold text-xl text-slate-900 tracking-tight block leading-tight">Kira
@@ -354,8 +363,8 @@
             <!-- SCROLLABLE PAGE CONTENTS -->
             <div id="scroll-container" class="flex-1 overflow-y-auto scroll-smooth min-h-0 relative p-4 md:p-8">
 
-                <!-- TNG Signature Curved Blue Top Backdrop -->
-                <div class="tng-top-wave"></div>
+                <!-- Kira Signature Curved Blue Top Backdrop -->
+                <div class="kira-top-wave"></div>
 
                 <!-- Content Wrapper -->
                 <div class="max-w-6xl mx-auto w-full space-y-6 relative z-10">
@@ -392,7 +401,7 @@
 
                             <!-- Balance Hero Card -->
                             <div
-                                class="md:col-span-1 bg-tng rounded-3xl p-6 md:p-7 text-white shadow-xl shadow-blue-600/20 border border-white/15 relative overflow-hidden flex flex-col justify-between min-h-[245px]">
+                                class="md:col-span-1 bg-kira rounded-3xl p-6 md:p-7 text-white shadow-xl shadow-blue-600/20 border border-white/15 relative overflow-hidden flex flex-col justify-between min-h-[245px]">
                                 <div
                                     class="absolute -right-6 -bottom-6 w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none">
                                 </div>
@@ -493,7 +502,7 @@
                                         <p class="text-xs text-slate-500 mb-4 max-w-sm">Link your SPayLater, Grab
                                             PayLater, or Atome to view consolidated payments in one place.</p>
                                         <button onclick="switchTab('consent')"
-                                            class="bg-tng hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-full transition-all shadow-md shadow-blue-500/20 active:scale-95">Go
+                                            class="bg-kira hover:bg-blue-700 text-white text-xs font-bold px-5 py-2.5 rounded-full transition-all shadow-md shadow-blue-500/20 active:scale-95">Go
                                             to Consent Centre</button>
                                     </div>
 
@@ -528,7 +537,7 @@
                                 <div class="flex justify-between items-center mb-6">
                                     <div class="flex items-center gap-2">
                                         <div
-                                            class="w-8 h-8 rounded-xl bg-[#eef5ff] text-tng flex items-center justify-center font-bold text-sm">
+                                            class="w-8 h-8 rounded-xl bg-[#eef5ff] text-kira flex items-center justify-center font-bold text-sm">
                                             📅</div>
                                         <h3 id="calendar-month-year"
                                             class="font-extrabold text-slate-800 text-lg tracking-tight"></h3>
@@ -680,7 +689,7 @@
                             <div
                                 class="bg-white p-7 rounded-3xl border border-slate-200/70 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
                                 <div
-                                    class="w-16 h-16 bg-[#eef5ff] rounded-2xl flex items-center justify-center mb-3 text-tng">
+                                    class="w-16 h-16 bg-[#eef5ff] rounded-2xl flex items-center justify-center mb-3 text-kira">
                                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
@@ -789,7 +798,7 @@
                                         </div>
                                         <div class="w-full bg-white rounded-full h-2.5">
                                             <div id="budget-expenses-bar"
-                                                class="bg-tng h-2.5 rounded-full transition-all duration-500"
+                                                class="bg-kira h-2.5 rounded-full transition-all duration-500"
                                                 style="width: 0%"></div>
                                         </div>
                                     </div>
@@ -841,7 +850,7 @@
                                 <div class="flex items-center justify-between gap-3 mb-5">
                                     <div class="flex items-center gap-3">
                                         <div
-                                            class="w-10 h-10 bg-[#eef5ff] text-tng rounded-xl flex items-center justify-center text-xl font-bold">
+                                            class="w-10 h-10 bg-[#eef5ff] text-kira rounded-xl flex items-center justify-center text-xl font-bold">
                                             🛡️</div>
                                         <div>
                                             <h3 class="font-extrabold text-base text-slate-900">Refund & Dispute Tracker
@@ -860,7 +869,7 @@
                             <div class="bg-white p-7 rounded-3xl border border-slate-200/70 shadow-sm">
                                 <div class="flex items-center gap-3 mb-4">
                                     <div
-                                        class="w-10 h-10 bg-[#eef5ff] text-tng rounded-xl flex items-center justify-center text-xl font-bold">
+                                        class="w-10 h-10 bg-[#eef5ff] text-kira rounded-xl flex items-center justify-center text-xl font-bold">
                                         🔐</div>
                                     <div>
                                         <h3 class="font-extrabold text-base text-slate-900">Consent Centre</h3>
@@ -871,7 +880,7 @@
                                     third-party BNPL providers sync with your unified dashboard. Revoke or re-link
                                     permissions anytime.</p>
                                 <button onclick="switchTab('consent')"
-                                    class="w-full bg-tng hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-lg shadow-blue-500/20 text-sm active:scale-95 flex items-center justify-center gap-2">
+                                    class="w-full bg-kira hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-lg shadow-blue-500/20 text-sm active:scale-95 flex items-center justify-center gap-2">
                                     <span>+ Link New BNPL Provider</span>
                                 </button>
                             </div>
