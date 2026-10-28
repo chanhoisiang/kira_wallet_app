@@ -121,11 +121,6 @@
 
 <body
     class="h-screen w-full overflow-hidden text-slate-800 bg-[#ecf3ff] relative font-sans antialiased selection:bg-blue-100 selection:text-blue-900">
-    <!-- Demonstration Data Notice (Matches Report Sections E & F) -->
-    <div
-        class="w-full bg-amber-50 border-b border-amber-300 px-4 py-1.5 text-center text-xs font-semibold text-amber-800 shrink-0 z-50">
-        Demonstration data. No real money moves.
-    </div>
 
     <!-- ADD THIS RIGHT INSIDE THE OPENING <body> TAG OF index.html -->
     <div id="auth-overlay" class="auth-overlay">
@@ -137,7 +132,8 @@
             </div>
 
             <!-- Demonstration Data Banner on Login Screen -->
-            <div class="w-full mb-4 rounded-xl bg-amber-50 border border-amber-300 px-3 py-2 text-center text-xs font-semibold text-amber-800">
+            <div
+                class="w-full mb-4 rounded-xl bg-amber-50 border border-amber-300 px-3 py-2 text-center text-xs font-semibold text-amber-800">
                 Demonstration data. No real money moves.
             </div>
 
@@ -368,7 +364,15 @@
 
                 <!-- Content Wrapper -->
                 <div class="max-w-6xl mx-auto w-full space-y-6 relative z-10">
-
+                    <!-- Clean Non-Blocking Dashboard Notice Banner -->
+                    <div
+                        class="p-3.5 bg-amber-50 border border-amber-300 rounded-2xl flex items-center gap-3 shadow-xs">
+                        <span
+                            class="w-7 h-7 rounded-xl bg-amber-200 text-amber-900 flex items-center justify-center shrink-0 font-bold text-xs">⚠️</span>
+                        <p class="text-xs sm:text-sm font-bold text-amber-900">
+                            Demonstration data. No real money moves.
+                        </p>
+                    </div>
                     <!-- 1. HOME VIEW -->
                     <div id="view-home" class="block space-y-5">
 
