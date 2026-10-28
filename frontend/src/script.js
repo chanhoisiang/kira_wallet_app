@@ -88,6 +88,7 @@ function injectAuthAndSecurityUI() {
                     </div>
                     <h2 class="text-2xl font-black text-slate-900">Kira Wallet</h2>
                     <p id="kira-auth-subtitle" class="text-xs font-semibold text-slate-500 mt-1">Sign in to manage your BNPL installments & budget</p>
+                    <div class="w-full mt-4 mb-3 rounded-xl bg-amber-50 border border-amber-300 px-3 py-2 text-center text-xs font-semibold text-amber-800">Demonstration data. No real money moves.</div>
                 </div>
 
                 <!-- Sign In / Create Account Switcher -->
@@ -143,7 +144,7 @@ function injectAuthAndSecurityUI() {
     document.body.appendChild(uiWrapper);
 }
 
-window.switchAuthMode = function(mode) {
+window.switchAuthMode = function (mode) {
     authMode = mode;
     const isSignup = mode === 'signup';
 
@@ -179,7 +180,7 @@ window.switchAuthMode = function(mode) {
 
 window.switchAuthTab = window.switchAuthMode;
 
-window.handleAuthSubmit = async function(e) {
+window.handleAuthSubmit = async function (e) {
     e.preventDefault();
     const email = document.getElementById('kira-input-email')?.value.trim();
     const password = document.getElementById('kira-input-password')?.value;
@@ -259,7 +260,7 @@ window.handleAuthSubmit = async function(e) {
     }
 };
 
-window.handleForgotPassword = async function() {
+window.handleForgotPassword = async function () {
     const email = document.getElementById('kira-input-email')?.value.trim();
     const msgEl = document.getElementById('kira-auth-msg');
     if (!email) {
@@ -280,7 +281,7 @@ window.handleForgotPassword = async function() {
     }
 };
 
-window.handleSignOut = async function() {
+window.handleSignOut = async function () {
     if (realtimeChannel) {
         supabase.removeChannel(realtimeChannel);
         realtimeChannel = null;
@@ -416,7 +417,7 @@ function renderAll() {
 }
 
 // --- VIEW 1: HOME ---
-window.toggleBalanceMask = function() {
+window.toggleBalanceMask = function () {
     isBalanceMasked = !isBalanceMasked;
     renderAll();
 };
@@ -426,7 +427,7 @@ function renderHome(connected) {
     const emptyState = document.getElementById('home-empty-state');
     const overdueBanner = document.getElementById('overdue-alert-banner');
     const overdueTitle = document.getElementById('overdue-alert-title');
-    
+
     const totalOutstanding = connected.reduce((sum, a) => sum + Number(a.outstanding_amount), 0);
     const totalValEl = document.getElementById('total-val');
     const activeCountEl = document.getElementById('active-count-val');
@@ -484,7 +485,7 @@ function renderHome(connected) {
 }
 
 // --- VIEW 2: CALENDAR ---
-window.changeMonth = function(offset) {
+window.changeMonth = function (offset) {
     currentCalMonth += offset;
     selectedCalDay = null;
     if (currentCalMonth > 11) {
@@ -499,7 +500,7 @@ window.changeMonth = function(offset) {
     renderCalendar(connectedAccounts);
 };
 
-window.selectCalendarDay = function(day) {
+window.selectCalendarDay = function (day) {
     selectedCalDay = (selectedCalDay === day) ? null : day;
     const shariahOnly = document.getElementById('toggleShariah')?.checked || false;
     const connectedAccounts = accountsData.filter(a => a.is_connected && (!shariahOnly || a.is_shariah));
@@ -634,9 +635,9 @@ function renderCalendarGrid(connected) {
 
         if (isExactMonth) {
             if (!eventsByDay[origD]) eventsByDay[origD] = [];
-            eventsByDay[origD].push({ 
-                ...acc, 
-                status: getDynamicStatus(acc.repayment_status, acc.repayment_date) 
+            eventsByDay[origD].push({
+                ...acc,
+                status: getDynamicStatus(acc.repayment_status, acc.repayment_date)
             });
         } else if (isFutureMonthWithBalance) {
             if (!eventsByDay[origD]) eventsByDay[origD] = [];
@@ -735,7 +736,7 @@ async function executeSinglePayment(acc) {
     return true;
 }
 
-window.payInstallment = async function(id) {
+window.payInstallment = async function (id) {
     const acc = accountsData.find(a => String(a.id) === String(id));
     if (!acc) return;
 
@@ -747,7 +748,7 @@ window.payInstallment = async function(id) {
     }
 };
 
-window.payAllDueInstallments = async function() {
+window.payAllDueInstallments = async function () {
     const dueAccounts = accountsData.filter(a => a.is_connected && getDynamicStatus(a.repayment_status, a.repayment_date) !== 'Paid');
     if (dueAccounts.length === 0) {
         showToast('All connected accounts are already settled!');
@@ -831,7 +832,7 @@ function updateChart(connected) {
 }
 
 // --- VIEW 4: BUDGET & SIMULATOR ---
-window.setSimTenure = function(months) {
+window.setSimTenure = function (months) {
     simTenure = months;
     [3, 6, 12].forEach(m => {
         const btn = document.getElementById(`tenure-btn-${m}`);
@@ -844,13 +845,13 @@ window.setSimTenure = function(months) {
     updateSimulator();
 };
 
-window.resetSimulator = function() {
+window.resetSimulator = function () {
     const slider = document.getElementById('sim-price-slider');
     if (slider) slider.value = 0;
     setSimTenure(3);
 };
 
-window.updateSimulator = function() {
+window.updateSimulator = function () {
     const shariahOnly = document.getElementById('toggleShariah')?.checked || false;
     const connectedAccounts = accountsData.filter(a => a.is_connected && (!shariahOnly || a.is_shariah));
     renderBudget(connectedAccounts);
@@ -890,7 +891,7 @@ function renderBudget(connected) {
     const bnplBar = document.getElementById('budget-bnpl-bar');
     if (expBar) expBar.style.width = `${expPct}%`;
     if (bnplBar) bnplBar.style.width = `${bnplPct}%`;
-    
+
     const impactBar = document.getElementById('impact-bar');
     const impactPctEl = document.getElementById('impact-percent');
     const titleEl = document.getElementById('budget-status-title');
@@ -917,17 +918,17 @@ function renderBudget(connected) {
     }
 }
 
-window.openBudgetModal = function() {
+window.openBudgetModal = function () {
     document.getElementById('input-budget-income').value = budgetData.income;
     document.getElementById('input-budget-expenses').value = budgetData.expenses;
     document.getElementById('modal-budget').classList.remove('hidden');
 };
 
-window.closeBudgetModal = function() {
+window.closeBudgetModal = function () {
     document.getElementById('modal-budget').classList.add('hidden');
 };
 
-window.saveBudget = async function(e) {
+window.saveBudget = async function (e) {
     e.preventDefault();
     if (!currentUser) return;
 
@@ -985,17 +986,17 @@ function renderMore() {
     `).join('');
 }
 
-window.openDisputeModal = function() {
+window.openDisputeModal = function () {
     document.getElementById('input-dispute-merchant').value = '';
     document.getElementById('input-dispute-amount').value = '';
     document.getElementById('modal-dispute').classList.remove('hidden');
 };
 
-window.closeDisputeModal = function() {
+window.closeDisputeModal = function () {
     document.getElementById('modal-dispute').classList.add('hidden');
 };
 
-window.submitDispute = async function(e) {
+window.submitDispute = async function (e) {
     e.preventDefault();
     if (!currentUser) return;
 
@@ -1034,18 +1035,17 @@ function renderConsentCentre() {
                 </div>
             </div>
             <button onclick="toggleAccountConnection('${acc.id}', ${acc.is_connected})" 
-                class="px-5 py-2 rounded-full text-xs font-bold transition-all active:scale-95 shadow-xs cursor-pointer ${
-                    acc.is_connected 
-                    ? 'bg-emerald-500 text-white hover:bg-red-500' 
-                    : 'bg-[#0062eb] text-white hover:bg-blue-700'
-                }">
+                class="px-5 py-2 rounded-full text-xs font-bold transition-all active:scale-95 shadow-xs cursor-pointer ${acc.is_connected
+            ? 'bg-emerald-500 text-white hover:bg-red-500'
+            : 'bg-[#0062eb] text-white hover:bg-blue-700'
+        }">
                 ${acc.is_connected ? 'Connected ✓' : 'Connect'}
             </button>
         </div>
     `).join('');
 }
 
-window.toggleAccountConnection = async function(id, currentState) {
+window.toggleAccountConnection = async function (id, currentState) {
     const item = accountsData.find(a => String(a.id) === String(id));
     if (!item) return;
 
@@ -1065,7 +1065,7 @@ window.toggleAccountConnection = async function(id, currentState) {
 
     const { error } = await supabase
         .from('bnpl_accounts')
-        .update({ 
+        .update({
             is_connected: newState,
             outstanding_amount: newOutstanding,
             next_repayment_amount: newNextRepayment,
@@ -1087,11 +1087,11 @@ window.toggleAccountConnection = async function(id, currentState) {
     }
 };
 
-window.filterShariah = function() {
+window.filterShariah = function () {
     renderAll();
 };
 
-window.switchTab = function(tab) {
+window.switchTab = function (tab) {
     const views = ['home', 'calendar', 'insights', 'budget', 'more', 'consent'];
     views.forEach(v => {
         document.getElementById(`view-${v}`)?.classList.toggle('hidden', v !== tab);
@@ -1102,7 +1102,7 @@ window.switchTab = function(tab) {
     const activeNav = tab === 'consent' ? 'more' : tab;
     ['home', 'calendar', 'insights', 'budget', 'more'].forEach(nav => {
         const isCurrent = nav === activeNav;
-        
+
         const deskBtn = document.getElementById(`desktop-nav-${nav}`);
         if (deskBtn) {
             deskBtn.className = isCurrent
